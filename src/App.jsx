@@ -29,6 +29,9 @@ import { useNotesData } from "./hooks/useNotesData.js";
 import { useReminders } from "./hooks/useReminders.js";
 import { useTradeData } from "./hooks/useTradeData.js";
 import { useChecklistState } from "./hooks/useChecklistState.js";
+import { IncompleteChecklistDialog } from "./shell/components/IncompleteChecklistDialog.jsx";
+import { AddTradeDialog } from "./shell/components/AddTradeDialog.jsx";
+import { DownloadLogDialog } from "./shell/components/DownloadLogDialog.jsx";
 import { FONT_DISPLAY, FONT_MONO, fmt2dp, fmtINR, fmtINRsigned, fmtHour12, formatRelativeTime } from "./lib/format.js";
 import {
   tradeRowToJs, tradeJsToRow, reminderRowToJs, reminderJsToRow, fundTxRowToJs, fundTxJsToRow,
@@ -102,7 +105,7 @@ import {
   isWeekendISO, nearestLegExpiry, contractDateCode, isLegComplete, drawPdfMasthead, formatLegLine, pad2,
   fmtDateDMY, fmtDateTimeDMY, fmtTimeOnly, isoToDMY, isoToWordDate, isoToMonDDYYYY, isoToShortDate, daysUntil,
   shiftForHoliday, nextWeekdayOnOrAfter, lastWeekdayOfMonth, expiryDayOfWeekFor, generateExpiryOptions,
-  monthKeyOf, monthLabel, legsToParts, computeNetPremiumSigned, computeStrategyPayoff, escHtml, computeLegPL, computeClosedLegsPL, classifyLegSymbol,
+  legsToParts, computeNetPremiumSigned, computeStrategyPayoff, escHtml, computeLegPL, computeClosedLegsPL, classifyLegSymbol,
   isStrategyHedgeEligible, legsMatchForGrouping, findMatchingActiveLeg, groupLegsByPosition, closeLotsFIFO, detectStrategyShape, resolveDetectedStrategyLabel,
 } from "./lib/dateUtils.js";
 
@@ -1471,181 +1474,42 @@ function PreTradeChecklist({ session, pinRecord, onPinChanged, securityQuestions
       )}
 
       {incompleteChecklistDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 tj-fade" onClick={() => setIncompleteChecklistDialogOpen(false)}>
-          <div className="w-full max-w-sm rounded-2xl border border-amber-900 bg-zinc-900 tj-solid-bg shadow-2xl p-5 space-y-4 tj-popover" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2">
-              <IconAlertTriangle size={18} className="text-amber-400 flex-shrink-0" />
-              <p className="text-sm font-semibold text-amber-400" style={FONT_DISPLAY}>Checklist not complete</p>
-            </div>
-            <p className="text-xs text-zinc-400">
-              You haven't finished the pre-trade checklist yet ({missingCritical.length} item{missingCritical.length === 1 ? "" : "s"} pending). Do you want to proceed and save anyway, or go fill it in first?
-            </p>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => { setIncompleteChecklistDialogOpen(false); saveCheck(); }}
-                className="tj-primary-bg font-semibold text-sm px-4 py-2.5 rounded-lg hover:scale-[1.02] active:scale-95 transition-transform"
-              >
-                Proceed and Save Anyway
-              </button>
-              <button
-                onClick={() => { setIncompleteChecklistDialogOpen(false); setTopTab("checklist"); }}
-                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm px-4 py-2.5 rounded-lg transition-colors"
-              >
-                Take Me to the Checklist
-              </button>
-            </div>
-          </div>
-        </div>
+        <IncompleteChecklistDialog
+          missingCount={missingCritical.length}
+          onClose={() => setIncompleteChecklistDialogOpen(false)}
+          onProceedAnyway={() => { setIncompleteChecklistDialogOpen(false); saveCheck(); }}
+          onGoToChecklist={() => { setIncompleteChecklistDialogOpen(false); setTopTab("checklist"); }}
+        />
       )}
 
       {addTradeDialogOpen && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 ${addTradeDialogClosing ? "tj-backdrop-out" : "tj-fade"}`}
-          onClick={addTradeMoodStepTs ? undefined : closeAddTradeDialog}
-        >
-          <div
-            className={`w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 tj-solid-bg shadow-2xl p-5 space-y-4 ${addTradeDialogClosing ? "tj-dialog-out" : "tj-popover"}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {addTradeMoodStepTs ? (
-              <>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-zinc-100" style={FONT_DISPLAY}>Trade Added</p>
-                  <button onClick={skipAddTradeMood} className="text-zinc-500 hover:text-zinc-300 hover:rotate-90 transition-transform"><IconX size={16} /></button>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2" style={FONT_MONO}>How are you feeling right now?</p>
-                  <div className="flex flex-wrap gap-2">
-                    {MOOD_OPTIONS.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setAddTradeSelectedMood((prev) => (prev === m.id ? null : m.id))}
-                        className={`flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-full border transition-colors ${
-                          addTradeSelectedMood === m.id ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"
-                        }`}
-                      >
-                        <MoodEmoji id={m.id} size={16} /> {m.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={saveAddTradeMood} disabled={!addTradeSelectedMood} className="tj-primary-bg font-semibold text-sm px-4 py-2.5 rounded-lg flex-1 hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">
-                    Save
-                  </button>
-                  <button onClick={skipAddTradeMood} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm px-4 py-2.5 rounded-lg">
-                    Skip
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-zinc-100" style={FONT_DISPLAY}>Add Trade</p>
-                  <button onClick={closeAddTradeDialog} className="text-zinc-500 hover:text-zinc-300 hover:rotate-90 transition-transform"><IconX size={16} /></button>
-                </div>
-                <label className="block">
-                  <span className="text-xs text-zinc-500">Trade date</span>
-                  <div className="mt-1">
-                    <CalendarPicker value={addTradeDate} onChange={setAddTradeDate} holidays={holidays} businessDaysOnly maxDate={localISODate(Date.now())} placeholder="Select date" />
-                  </div>
-                  {!addTradeDate && (
-                    <p className="text-xs text-amber-400 mt-1.5">Today isn't a trading day pick another date to continue.</p>
-                  )}
-                </label>
-                <p className="text-xs text-zinc-600">
-                  A blank, editable row will be added to {addTradeDate ? monthLabel(monthKeyOf(addTradeDate)) : "the selected month"}&apos;s table. Pick a date in the current month to add it here, or any other date to jump straight to that month.
-                </p>
-                {addTradeDate && addTradeDate < localISODate(Date.now()) && (
-                  <div>
-                    {addTradeAffectsCapital === null ? (
-                      <>
-                        <p className="text-xs text-zinc-500 mb-1.5">Should this trade affect your total capital?</p>
-                        <div className="flex gap-2">
-                          <button onClick={() => setAddTradeAffectsCapital(true)} className="flex-1 text-xs px-3 py-2 rounded-lg border bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600">Yes</button>
-                          <button onClick={() => setAddTradeAffectsCapital(false)} className="flex-1 text-xs px-3 py-2 rounded-lg border bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600">No</button>
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-xs text-zinc-600">
-                        {addTradeAffectsCapital ? "This trade will count toward your total capital." : "This trade will not affect your total capital."}{" "}
-                        <button onClick={() => setAddTradeAffectsCapital(null)} className="tj-primary-text underline underline-offset-2">Change</button>
-                      </p>
-                    )}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <button onClick={confirmAddTrade} disabled={!addTradeDate} className="tj-primary-bg font-semibold text-sm px-4 py-2.5 rounded-lg flex-1 hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">
-                    Add Trade
-                  </button>
-                  <button onClick={closeAddTradeDialog} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm px-4 py-2.5 rounded-lg">
-                    Cancel
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <AddTradeDialog
+          closing={addTradeDialogClosing}
+          moodStepTs={addTradeMoodStepTs}
+          selectedMood={addTradeSelectedMood}
+          onSelectMood={setAddTradeSelectedMood}
+          onSaveMood={saveAddTradeMood}
+          onSkipMood={skipAddTradeMood}
+          date={addTradeDate}
+          onDateChange={setAddTradeDate}
+          holidays={holidays}
+          affectsCapital={addTradeAffectsCapital}
+          onAffectsCapitalChange={setAddTradeAffectsCapital}
+          onConfirm={confirmAddTrade}
+          onClose={closeAddTradeDialog}
+        />
       )}
 
       {downloadDialogOpen && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 ${downloadDialogClosing ? "tj-backdrop-out" : "tj-fade"}`}
-          onClick={closeDownloadDialog}
-        >
-          <div
-            className={`w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 tj-solid-bg shadow-2xl p-5 space-y-4 ${downloadDialogClosing ? "tj-dialog-out" : "tj-popover"}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-zinc-100" style={FONT_DISPLAY}>Download Log</p>
-              <button onClick={closeDownloadDialog} className="text-zinc-500 hover:text-zinc-300 hover:rotate-90 transition-transform"><IconX size={16} /></button>
-            </div>
-            <p className="text-xs text-zinc-600">
-              Choose which entries to include for the selected date range ({filtered.length} {filtered.length === 1 ? "entry" : "entries"} total).
-            </p>
-            <div className="space-y-2.5">
-              <label className="flex items-center gap-2.5 text-sm text-zinc-200 cursor-pointer">
-                <input type="checkbox" checked={downloadTypes.observation} onChange={() => toggleDownloadType("observation")} className="w-4 h-4 accent-amber-400" />
-                Observation data
-              </label>
-              <label className="flex items-center gap-2.5 text-sm text-zinc-200 cursor-pointer">
-                <input type="checkbox" checked={downloadTypes.trade} onChange={() => toggleDownloadType("trade")} className="w-4 h-4 accent-amber-400" />
-                Trade data
-              </label>
-              <label className="flex items-center gap-2.5 text-sm text-zinc-200 cursor-pointer">
-                <input type="checkbox" checked={downloadTypes.funds_added} onChange={() => toggleDownloadType("funds_added")} className="w-4 h-4 accent-amber-400" />
-                Funds added
-              </label>
-              <label className="flex items-center gap-2.5 text-sm text-zinc-200 cursor-pointer">
-                <input type="checkbox" checked={downloadTypes.funds_withdrawn} onChange={() => toggleDownloadType("funds_withdrawn")} className="w-4 h-4 accent-amber-400" />
-                Withdrawals
-              </label>
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <button
-                  onClick={confirmDownloadPdf}
-                  disabled={!downloadTypes.observation && !downloadTypes.trade && !downloadTypes.funds_added && !downloadTypes.funds_withdrawn}
-                  className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-100 font-semibold text-sm px-4 py-2.5 rounded-lg flex-1 hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center border border-zinc-700"
-                >
-                  .PDF
-                </button>
-                <button
-                  onClick={confirmDownload}
-                  disabled={!downloadTypes.observation && !downloadTypes.trade && !downloadTypes.funds_added && !downloadTypes.funds_withdrawn}
-                  className="tj-primary-bg disabled:opacity-40 font-semibold text-sm px-4 py-2.5 rounded-lg flex-1 hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center"
-                >
-                  .MD
-                </button>
-              </div>
-              <button onClick={closeDownloadDialog} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm px-4 py-2.5 rounded-lg">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <DownloadLogDialog
+          closing={downloadDialogClosing}
+          entryCount={filtered.length}
+          downloadTypes={downloadTypes}
+          onToggleType={toggleDownloadType}
+          onDownloadPdf={confirmDownloadPdf}
+          onDownloadMarkdown={confirmDownload}
+          onClose={closeDownloadDialog}
+        />
       )}
 
       {entryDownloadFor && (
