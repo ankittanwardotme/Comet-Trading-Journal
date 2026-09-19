@@ -48,6 +48,9 @@ import { Tooltip } from "./components/shared/Tooltip.jsx";
 import { InfoIcon } from "./components/shared/InfoIcon.jsx";
 import { TabBar } from "./components/shared/TabBar.jsx";
 import { CollapsibleSection, CollapsibleRegion } from "./components/shared/CollapsibleSection.jsx";
+import { AvatarSVG } from "./components/shared/AvatarSVG.jsx";
+import { MoodEmoji } from "./components/shared/MoodEmoji.jsx";
+import { MoodPickerButton } from "./components/shared/MoodPickerButton.jsx";
 import { MOOD_OPTIONS, moodMeta, TWEMOJI_CDN } from "./lib/moodOptions.js";
 import { DATA_ROWS, RADIO_OPTIONS, dataReadLabel, getVerdict } from "./lib/marketRead.js";
 import {
@@ -59,21 +62,6 @@ import {
   isStrategyHedgeEligible, legsMatchForGrouping, findMatchingActiveLeg, groupLegsByPosition, closeLotsFIFO, detectStrategyShape, resolveDetectedStrategyLabel,
 } from "./lib/dateUtils.js";
 
-function MoodEmoji({ id, size = 18, className = "" }) {
-  const m = moodMeta(id);
-  if (!m) return null;
-  return (
-    <img
-      src={`${TWEMOJI_CDN}${m.codepoint}.svg`}
-      alt={m.label}
-      width={size}
-      height={size}
-      className={`inline-block flex-shrink-0 align-middle ${className}`}
-      style={{ width: size, height: size }}
-      loading="lazy"
-    />
-  );
-}
 
 
 /* ============== Small components ============== */
@@ -761,33 +749,6 @@ function AppLoadingScreen() {
     </div>
   );
 }
-
-const AvatarSVG = React.memo(function AvatarSVG({ preset, size = 64, animate = true, delay = 0 }) {
-  if (!preset) return null;
-  const gradId = `tj-avatar-grad-${preset.id}`;
-  return (
-    <svg
-      viewBox="0 0 100 100" width={size} height={size}
-      className={animate ? "tj-avatar-breathe" : ""}
-      style={animate ? { animationDelay: `${delay}s` } : undefined}
-    >
-      <defs>
-        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={preset.colors[0]} />
-          <stop offset="100%" stopColor={preset.colors[1]} />
-        </linearGradient>
-      </defs>
-      <circle cx="50" cy="50" r="48" fill={`url(#${gradId})`} />
-      <path d="M 18 96 Q 50 64 82 96 Z" fill="rgba(255,255,255,0.9)" />
-      <circle cx="50" cy="42" r="18" fill="rgba(255,255,255,0.97)" />
-      {preset.hair === "short" ? (
-        <path d="M 31 35 Q 50 17 69 35 Q 68 25 50 23 Q 32 25 31 35 Z" fill={preset.colors[1]} />
-      ) : (
-        <path d="M 29 46 Q 26 19 50 19 Q 74 19 71 46 Q 67 29 50 29 Q 33 29 29 46 Z" fill={preset.colors[1]} />
-      )}
-    </svg>
-  );
-});
 
 function buildCalendarWeeks(year, monthIdx) {
   const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
@@ -3776,78 +3737,6 @@ function EditableCell({ value, onChange, type = "text", numeric = false, classNa
       className={`bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-400 w-full disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
       style={FONT_MONO}
     />
-  );
-}
-
-// Small emoji icon button, docked inside/beside the P/L input's edge. Its
-// picker opens as a fixed-position portal overlay (same pattern as
-// CalendarPicker) so it floats on top of the table instead of pushing
-// other rows out of place. Only ever rendered while the row is being
-// edited — the read view shows no mood indicator at all.
-const MOOD_PICKER_EST_WIDTH = 260;
-function MoodPickerButton({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState(null);
-  const btnRef = useRef(null);
-  const meta = value ? moodMeta(value) : null;
-
-  const updatePosition = () => {
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      const left = Math.min(rect.left, window.innerWidth - MOOD_PICKER_EST_WIDTH - 8);
-      setCoords({ top: rect.bottom + 6, left: Math.max(8, left) });
-    }
-  };
-  const openPicker = () => { updatePosition(); setOpen(true); };
-
-  useEffect(() => {
-    if (!open) return;
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [open]);
-
-  return (
-    <>
-      <Tooltip text={meta ? `Exit mood: ${meta.label}` : "Tag exit mood"}>
-        <button
-          type="button"
-          ref={btnRef}
-          onClick={() => (open ? setOpen(false) : openPicker())}
-          className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center transition-colors hover:bg-[rgba(128,128,128,0.18)] ${!meta ? "opacity-40 grayscale" : ""}`}
-        >
-          {meta ? <MoodEmoji id={meta.id} size={18} /> : (
-            <img src={`${TWEMOJI_CDN}1F610.svg`} alt="Tag mood" width={18} height={18} style={{ width: 18, height: 18 }} loading="lazy" />
-          )}
-        </button>
-      </Tooltip>
-      {open && coords && createPortal(
-        <>
-          <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
-          <div
-            className="fixed z-[9999] rounded-xl border border-zinc-800 tj-solid-bg shadow-2xl p-2.5 flex flex-wrap gap-1.5 tj-popover"
-            style={{ top: coords.top, left: coords.left, width: MOOD_PICKER_EST_WIDTH }}
-          >
-            {MOOD_OPTIONS.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => { onChange(value === m.id ? null : m.id); setOpen(false); }}
-                className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-full border transition-colors ${
-                  value === m.id ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-600"
-                }`}
-              >
-                <MoodEmoji id={m.id} size={16} /> {m.label}
-              </button>
-            ))}
-          </div>
-        </>,
-        getPortalTarget()
-      )}
-    </>
   );
 }
 
