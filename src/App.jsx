@@ -24,6 +24,7 @@ import { notify, subscribeToNotifications, deleteWithUndo, clearPersistedNotific
 import { getPortalTarget } from "./lib/portal.js";
 import { THEMES, themeGlobalCss, THEME_PRIMARY_CSS } from "./lib/theme.js";
 import { useThemeSettings } from "./hooks/useThemeSettings.js";
+import { FONT_DISPLAY, FONT_MONO, fmt2dp, fmtINR, fmtINRsigned, fmtHour12, formatRelativeTime } from "./lib/format.js";
 import {
   MONTH_NAMES, MONTH_ABBR, EXPIRY_DOW_CUTOVER, localISODate,
   isWeekendISO, nearestLegExpiry, contractDateCode, isLegComplete, drawPdfMasthead, formatLegLine, pad2,
@@ -323,9 +324,6 @@ function pickRandomQuestions(count) {
   const shuffled = [...SECURITY_QUESTIONS].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 }
-
-const FONT_DISPLAY = { fontFamily: "'Victor Mono', ui-sans-serif, system-ui, sans-serif" };
-const FONT_MONO = { fontFamily: "'Victor Mono', ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace" };
 
 
 /* ============== Strategies ============== */
@@ -1026,20 +1024,6 @@ const COLOR_CLASSES = {
   violet: { bg: "bg-violet-400/10", text: "text-violet-400" },
 };
 
-// Plain 2-decimal number, no currency symbol — used for raw premium values
-// (e.g. "Opened 96.00 → Closed 40.00") where the ₹ prefix would be redundant.
-const fmt2dp = (n) => {
-  const v = parseFloat(n);
-  return Number.isNaN(v) ? "—" : v.toFixed(2);
-};
-const fmtINR = (n) => {
-  if (n === null || n === undefined || Number.isNaN(n) || n === 0) return "—";
-  return "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
-const fmtINRsigned = (n) => {
-  if (n === null || n === undefined || Number.isNaN(n)) return "—";
-  return (n >= 0 ? "+₹" : "-₹") + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
 // Markets don't trade Sat/Sun — reject weekend picks in date inputs. Parses the
 // ISO string manually (not `new Date(iso)`) to avoid timezone-shift bugs.
 
@@ -7761,13 +7745,6 @@ function reminderTimeToHour24(time) {
   let hour = h12 % 12;
   if (ap === "PM") hour += 12;
   return hour;
-}
-
-function fmtHour12(h) {
-  if (h === 0) return "12 AM";
-  if (h < 12) return `${h} AM`;
-  if (h === 12) return "12 PM";
-  return `${h - 12} PM`;
 }
 
 function CalendarViewSwitcher({ view, setView }) {
@@ -15159,18 +15136,6 @@ function PinConfirmDialog({ pinRecord, title, message, onConfirm, onClose }) {
       </div>
     </div>
   );
-}
-
-function formatRelativeTime(timestamp) {
-  const diffSec = Math.floor((Date.now() - timestamp) / 1000);
-  if (diffSec < 5) return "just now";
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} min ago`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour} ${diffHour === 1 ? "hour" : "hours"} ago`;
-  const diffDay = Math.floor(diffHour / 24);
-  return `${diffDay} ${diffDay === 1 ? "day" : "days"} ago`;
 }
 
 function ToastStack() {
