@@ -39,6 +39,8 @@ import {
   bandIndexForDays, GREEKS_PROFILES, GREEKS_POLARITY, POLARITY_DISPLAY, getEffectiveGreeksProfile, getGreeksBand, COLOR_CLASSES,
 } from "./lib/greeks.js";
 import { computeHomeStats, heatCellStyle, buildMonthColumns } from "./lib/homeStats.js";
+import { MOOD_OPTIONS, moodMeta, TWEMOJI_CDN } from "./lib/moodOptions.js";
+import { DATA_ROWS, RADIO_OPTIONS, dataReadLabel, getVerdict } from "./lib/marketRead.js";
 import {
   MONTH_NAMES, MONTH_ABBR, EXPIRY_DOW_CUTOVER, localISODate,
   isWeekendISO, nearestLegExpiry, contractDateCode, isLegComplete, drawPdfMasthead, formatLegLine, pad2,
@@ -77,41 +79,6 @@ async function createPdfDoc(orientation) {
 
 
 
-const DATA_ROWS = [
-  { id: "oi_read", label: "OI Read", sub: "Rising Call OI at a strike often builds resistance there; rising Put OI often builds support. Falling OI on a rally can mean short-covering, not fresh buying.", contrarian: false },
-  { id: "fresh_oi", label: "Fresh OI Addition Today (Calls vs Puts)", sub: "Where NEW OI is building today, not just total OI — often a more real-time read than a static PCR.", contrarian: false },
-  { id: "pcr", label: "PCR (Put-Call Ratio)", sub: "Readings toward the extremes matter more than the middle — very high is often read as oversold, very low as overbought.", contrarian: false },
-  { id: "fii_options", label: "FII — Options Data", sub: "FII net positioning in options, often considered the more informed side of participant data.", contrarian: false },
-  { id: "pro_options", label: "Pro — Options Data", sub: "Proprietary desk positioning in options — another smart-money proxy alongside FII.", contrarian: false },
-  { id: "client_options", label: "Client — Options Data", sub: "Retail and client positioning — historically the side most often wrong at extremes.", contrarian: true },
-  { id: "fii_futures", label: "FII — Index Futures", sub: "Net FII long/short buildup in index futures — a classic institutional directional tell.", contrarian: false },
-  { id: "fii_cash", label: "FII — Cash Market", sub: "Net FII buying or selling in the cash market, separate from their futures positioning.", contrarian: false },
-  { id: "global_cues_read", label: "Global Cues / GIFT Nifty Indication", sub: "How GIFT Nifty, the US close, and Asian markets are pointing coming into or during today's session.", contrarian: false },
-  { id: "breadth", label: "Market Breadth (Advances vs Declines)", sub: "More advances than declines means broader participation and a healthier move. A narrow, breadth-poor rally is more fragile.", contrarian: false },
-  { id: "vix_trend", label: "VIX Trend Today", sub: "Rising VIX intraday often accompanies a nervous, falling market; falling VIX often accompanies a calm or rising one.", contrarian: false },
-];
-const RADIO_OPTIONS = [
-  { value: -2, label: "Bearish" }, { value: -1, label: "Sl. Bearish" }, { value: 0, label: "Neutral" },
-  { value: 1, label: "Sl. Bullish" }, { value: 2, label: "Bullish" },
-];
-const MOOD_OPTIONS = [
-  { id: "calm", label: "Calm", emoji: "😌", codepoint: "1F60C" },
-  { id: "confident", label: "Confident", emoji: "😎", codepoint: "1F60E" },
-  { id: "happy", label: "Happy", emoji: "😊", codepoint: "1F60A" },
-  { id: "fear", label: "Fear", emoji: "😨", codepoint: "1F628" },
-  { id: "greed", label: "Greed", emoji: "🤑", codepoint: "1F911" },
-  { id: "fomo", label: "FOMO", emoji: "😬", codepoint: "1F62C" },
-  { id: "frustrated", label: "Frustrated", emoji: "😤", codepoint: "1F624" },
-  { id: "sad", label: "Sad", emoji: "😢", codepoint: "1F622" },
-  { id: "angry", label: "Angry", emoji: "😡", codepoint: "1F621" },
-  { id: "hope", label: "Hope", emoji: "🤞", codepoint: "1F91E" },
-];
-function moodMeta(id) { return MOOD_OPTIONS.find((m) => m.id === id) || null; }
-// Renders mood emoji as actual Twemoji SVG images rather than native OS
-// emoji characters — native rendering varies wildly in size/style across
-// operating systems (and looks notably dated on some), while an image can
-// be sized explicitly and looks identical everywhere.
-const TWEMOJI_CDN = "https://cdn.jsdelivr.net/npm/@svgmoji/twemoji@2.0.0/svg/";
 function MoodEmoji({ id, size = 18, className = "" }) {
   const m = moodMeta(id);
   if (!m) return null;
@@ -127,21 +94,6 @@ function MoodEmoji({ id, size = 18, className = "" }) {
     />
   );
 }
-function dataReadLabel(val) {
-  if (val === undefined || val === null) return "—";
-  const opt = RADIO_OPTIONS.find((o) => o.value === val);
-  return opt ? opt.label : "—";
-}
-function getVerdict(avg) {
-  if (avg === null || avg === undefined) return { label: "No reads entered yet", color: "zinc" };
-  if (avg >= 1.2) return { label: "Bullish", color: "emerald" };
-  if (avg >= 0.4) return { label: "Slightly Bullish", color: "emerald" };
-  if (avg > -0.4) return { label: "Neutral / Mixed", color: "zinc" };
-  if (avg > -1.2) return { label: "Slightly Bearish", color: "rose" };
-  return { label: "Bearish", color: "rose" };
-}
-
-
 // Markets don't trade Sat/Sun — reject weekend picks in date inputs. Parses the
 // ISO string manually (not `new Date(iso)`) to avoid timezone-shift bugs.
 
