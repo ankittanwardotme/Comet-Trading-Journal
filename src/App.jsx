@@ -21,6 +21,7 @@ import {
   TRADE_IMAGES_BUCKET, uploadTradeFile, deleteTradeScreenshotFiles, deleteAllTradeStorageFilesForUser, deleteAllUserData,
 } from "./lib/supabaseClient.js";
 import { notify, subscribeToNotifications, deleteWithUndo, clearPersistedNotifications } from "./lib/notifications.js";
+import { getPortalTarget } from "./lib/portal.js";
 import {
   MONTH_NAMES, MONTH_ABBR, EXPIRY_DOW_CUTOVER, localISODate,
   isWeekendISO, nearestLegExpiry, contractDateCode, isLegComplete, drawPdfMasthead, formatLegLine, pad2,
@@ -3231,7 +3232,7 @@ function CalendarPicker({ value, onChange, holidays, businessDaysOnly = false, h
             </div>
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </div>
   );
@@ -3315,7 +3316,7 @@ function MonthPicker({ value, onChange, placeholder = "Select month" }) {
             </div>
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </div>
   );
@@ -3379,7 +3380,7 @@ function YearPicker({ value, onChange, years, placeholder = "Select year" }) {
             ))}
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </div>
   );
@@ -3449,7 +3450,7 @@ function ExpiryPicker({ value, onChange, holidays, referenceDate }) {
             ))}
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </div>
   );
@@ -3790,7 +3791,7 @@ function LegsTimelineModal({ legs, onClose, referenceDate }) {
         </div>
       </div>
     </div>,
-    document.querySelector(".tj-app") || document.body
+    getPortalTarget()
   );
 }
 
@@ -4114,7 +4115,7 @@ const Tooltip = React.memo(function Tooltip({ text, children, disabled = false, 
         >
           {text}
         </div>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </span>
   );
@@ -4198,7 +4199,7 @@ const InfoIcon = React.memo(function InfoIcon({ text }) {
         >
           {text}
         </div>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </>
   );
@@ -6415,7 +6416,7 @@ function LegsEditDialog({ initialUnderlying, initialLegs, onSave, onClose, holid
       </div>
       {timelineOpen && <LegsTimelineModal legs={legs} onClose={() => setTimelineOpen(false)} referenceDate={referenceDate} />}
     </div>,
-    document.querySelector(".tj-app") || document.body
+    getPortalTarget()
   );
 }
 
@@ -6640,7 +6641,7 @@ function MoodPickerButton({ value, onChange }) {
             ))}
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </>
   );
@@ -6751,7 +6752,7 @@ function TradeScreenshotsButton({ screenshots = [], onChange, tradeLabel = "trad
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body,
+        getPortalTarget(),
       )}
       {lightboxUrl && createPortal(
         <div className="fixed inset-0 z-[10000] bg-black/90 flex items-center justify-center p-8" onClick={() => setLightboxUrl(null)}>
@@ -6760,7 +6761,7 @@ function TradeScreenshotsButton({ screenshots = [], onChange, tradeLabel = "trad
             <IconX size={18} className="text-white" />
           </button>
         </div>,
-        document.querySelector(".tj-app") || document.body,
+        getPortalTarget(),
       )}
     </>
   );
@@ -6862,7 +6863,7 @@ function CompactFilterButton({ label, displayValue, options, onSelect, active, d
             ))}
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </>
   );
@@ -6951,7 +6952,7 @@ function DropdownFilterButton({ label, displayValue, options, onSelect, active, 
             ))}
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </>
   );
@@ -7020,7 +7021,7 @@ function NotesBadge({ notes, onOpenNote }) {
             ))}
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </>
   );
@@ -7266,7 +7267,7 @@ function TimeWheelField({ value, onChange, error = false }) {
             )}
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </div>
   );
@@ -7361,7 +7362,7 @@ function ReminderSearchablePicker({ groups, value, onSelect, totalCount }) {
             </div>
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </div>
   );
@@ -7784,7 +7785,7 @@ function StrategyPicker({ value, allStrategies, onChange }) {
             </div>
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </div>
   );
@@ -7861,7 +7862,7 @@ function ThemedSelect({ value, options, onChange }) {
             ))}
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </div>
   );
@@ -8796,7 +8797,7 @@ function ReminderAlarmPopup({ dueAlarms, onClose, onCloseAll, onSnoozeMinutes, o
         )}
       </div>
     </div>,
-    document.querySelector(".tj-app") || document.body
+    getPortalTarget()
   );
 }
 
@@ -9931,7 +9932,7 @@ function TradeLinkPicker({ pnlEntries, value, onChange }) {
             </div>
           </div>
         </div>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </>
   );
@@ -10091,7 +10092,7 @@ function ResourceEditorDialog({ initial, allTags, recentTags, onSave, onClose })
         </div>
       </div>
     </div>,
-    document.querySelector(".tj-app") || document.body
+    getPortalTarget()
   );
 }
 
@@ -10523,7 +10524,7 @@ function RowMenu({ mode, folders, currentFolderId, onNewNote, onNewFolder, onRen
             )}
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </>
   );
@@ -11595,7 +11596,7 @@ function MyLearningsTab({
                             ))}
                           </div>
                         </>,
-                        document.querySelector(".tj-app") || document.body
+                        getPortalTarget()
                       )}
                       {bulkDeleteConfirmOpen && createPortal(
                         <>
@@ -11609,7 +11610,7 @@ function MyLearningsTab({
                             </div>
                           </div>
                         </>,
-                        document.querySelector(".tj-app") || document.body
+                        getPortalTarget()
                       )}
                     </>
                   ) : (
@@ -11860,7 +11861,7 @@ function MyLearningsTab({
                       })}
                     </div>
                   </>,
-                  document.querySelector(".tj-app") || document.body
+                  getPortalTarget()
                 )}
               </div>
             )}
@@ -11906,7 +11907,7 @@ function MyLearningsTab({
             <IconFolderSymlink size={13} /> Move to “{dropIndicator.folderName}”
           </div>
         ),
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </div>
   );
@@ -14306,7 +14307,7 @@ function PreTradeChecklist({ session, pinRecord, onPinChanged, securityQuestions
                 </button>
               </div>
             </>,
-            document.querySelector(".tj-app") || document.body
+            getPortalTarget()
           )}
         </div>
       </div>
@@ -15649,7 +15650,7 @@ function ToastStack() {
         </div>
       ))}
     </div>,
-    document.querySelector(".tj-app") || document.body
+    getPortalTarget()
   );
 }
 
@@ -15800,7 +15801,7 @@ function NotificationBell() {
             </div>
           </div>
         </>,
-        document.querySelector(".tj-app") || document.body
+        getPortalTarget()
       )}
     </>
   );
