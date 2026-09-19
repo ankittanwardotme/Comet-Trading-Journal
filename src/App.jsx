@@ -32,6 +32,9 @@ import {
 import { bufToHex, hashPin, createPinRecord, verifyPin, SECURITY_QUESTIONS, normalizeAnswer, pickRandomQuestions } from "./lib/security.js";
 import { REMINDER_SEVERITY, REMINDER_EVENT_GROUPS, REMINDER_TRADE_GROUPS, REMINDER_TOTAL_COUNT, reminderBuiltInSeverity } from "./lib/remindersData.js";
 import {
+  parseReminderTime, currentTimeString, reminderCombinedEpoch, reminderRelativeAgo, reminderDayLabel, reminderTimeDisplay, reminderTimeToHour24,
+} from "./lib/reminderTime.js";
+import {
   DEFAULT_STRATEGIES, STRATEGY_CATEGORIES, PROFILE_OPTIONS, inferStrategyProfile, describeInferredProfile, LEG_TEMPLATES,
   slugify, makeUniqueId, DEFAULT_SECTION_DEFS, CHECKLIST_PROFILE_OPTIONS, freshChecklistItemId, CUSTOM_SECTION_COLORS, buildEffectiveSections,
 } from "./lib/checklistLogic.js";
@@ -65,6 +68,7 @@ import { NotificationBell } from "./components/shared/NotificationBell.jsx";
 import { DocsPage } from "./pages/docs/DocsPage.jsx";
 import { HolidayCalendarPage } from "./pages/holidays/HolidayCalendarPage.jsx";
 import { SettingsPage } from "./pages/settings/SettingsPage.jsx";
+import { HomePage } from "./pages/home/HomePage.jsx";
 import { MOOD_OPTIONS, moodMeta, TWEMOJI_CDN } from "./lib/moodOptions.js";
 import { DATA_ROWS, RADIO_OPTIONS, dataReadLabel, getVerdict } from "./lib/marketRead.js";
 import {
@@ -1005,8 +1009,6 @@ function CloseLegForm({ leg, onConfirm, onCancel }) {
   );
 }
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
 // Builds a chronological, timestamped list of every event across a trade's
 // legs: each leg's opening, and separately its closing if it has one
 // (roll/partial/full), each tagged with what kind of event it was and any
@@ -1100,423 +1102,6 @@ function LegsTimelineModal({ legs, onClose, referenceDate }) {
     getPortalTarget()
   );
 }
-
-function dayNameOf(iso) {
-  const [y, m, d] = iso.split("-").map(Number);
-  return DAY_NAMES[new Date(y, m - 1, d).getDay()];
-}
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-const GREETING_WORDS = ["Hi", "Hello", "Welcome back", "Hey there", "Greetings"];
-
-const QUOTE_OF_DAY = { quote: "You must expect great things of yourself before you can do them.", author: "Michael Jordan" };
-
-const StatCard = React.memo(function StatCard({ icon: Icon, label, value, valueColor = "text-zinc-100", small = false, info }) {
-  return (
-    <div className={`tj-info-card relative rounded-2xl border border-zinc-800 bg-zinc-900/40 ${small ? "p-4" : "p-5"} hover:border-zinc-700 transition-colors`}>
-      {info && <div className="absolute top-3 right-3"><InfoIcon text={info} /></div>}
-      <div className="flex items-center gap-2 mb-2">
-        <Icon size={14} className="tj-primary-text flex-shrink-0" />
-        <span className={`text-[11px] uppercase tracking-wide text-zinc-500 truncate ${info ? "pr-4" : ""}`} style={FONT_MONO}>{label}</span>
-      </div>
-      <p className={`${small ? "text-lg" : "text-2xl"} font-bold ${valueColor} truncate`} style={FONT_MONO}>{value}</p>
-    </div>
-  );
-});
-
-const InsightCard = React.memo(function InsightCard({ label, value, sub, valueColor = "text-zinc-100" }) {
-  return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-      <p className="text-[11px] uppercase tracking-wide text-zinc-500 mb-1.5" style={FONT_MONO}>{label}</p>
-      <p className={`text-lg font-bold ${valueColor} truncate`} style={FONT_DISPLAY}>{value}</p>
-      {sub && <p className="text-xs text-zinc-500 mt-0.5 truncate">{sub}</p>}
-    </div>
-  );
-});
-
-
-const MonthlyPLChart = React.memo(function MonthlyPLChart({ pnlEntries, year }) {
-  const { months, plByMonth, maxAbs } = useMemo(() => {
-    const monthsArr = [];
-    for (let m = 0; m < 12; m++) {
-      monthsArr.push({ key: `${year}-${pad2(m + 1)}`, monthIdx: m });
-    }
-    const plMap = {};
-    pnlEntries.forEach((e) => {
-      if (e.overallPL === "" || e.overallPL === null || e.overallPL === undefined) return;
-      const pl = parseFloat(e.overallPL);
-      if (Number.isNaN(pl)) return;
-      const key = (e.entryDate || "").slice(0, 7);
-      if (!key) return;
-      plMap[key] = (plMap[key] || 0) + pl;
-    });
-    const max = Math.max(1, ...monthsArr.map((m) => Math.abs(plMap[m.key] || 0)));
-    return { months: monthsArr, plByMonth: plMap, maxAbs: max };
-  }, [pnlEntries, year]);
-
-  // Labels sit as normal flex children directly above each bar (in DOM
-  // order, within a justify-end column) rather than being absolutely
-  // positioned — absolute positioning was being taken out of the flex flow
-  // entirely, which is why "items-center" was never actually centering it.
-  return (
-    <div className="flex items-end justify-between gap-0.5 h-32 px-5">
-      {months.map((m) => {
-        const val = plByMonth[m.key];
-        const hasData = val !== undefined && val !== 0;
-        const pct = hasData ? Math.max(10, Math.min(72, (Math.abs(val) / maxAbs) * 72)) : 3;
-        const isPos = (val || 0) >= 0;
-        return (
-          <div key={m.key} className="flex-1 flex flex-col items-center h-full justify-end min-w-0">
-            {hasData ? (
-              <span className={`text-[9px] font-semibold whitespace-nowrap mb-1 ${isPos ? "text-[#04B488]" : "text-[#F15E3B]"}`} style={FONT_MONO}>
-                {isPos ? "+" : "−"}{fmtINR(Math.abs(val))}
-              </span>
-            ) : (
-              <span className="text-[9px] mb-1">&nbsp;</span>
-            )}
-            <div
-              className="w-5 rounded-t-sm transition-all duration-700"
-              style={{ height: `${pct}%`, background: hasData ? (isPos ? "#04B488" : "#F15E3B") : "var(--tj-border)", minHeight: "3px" }}
-            ></div>
-            <span className="text-[9px] text-zinc-600 mt-1.5" style={FONT_MONO}>{MONTH_ABBR[m.monthIdx]}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-});
-
-
-const ExitDateHeatmap = React.memo(function ExitDateHeatmap({ pnlEntries }) {
-  const { plByDate, maxProfit, maxLoss } = useMemo(() => {
-    const map = {};
-    pnlEntries.forEach((e) => {
-      if (!e.exitDate || e.overallPL === "" || e.overallPL === null || e.overallPL === undefined) return;
-      const pl = parseFloat(e.overallPL);
-      if (Number.isNaN(pl)) return;
-      map[e.exitDate] = (map[e.exitDate] || 0) + pl;
-    });
-    const profits = [];
-    const losses = [];
-    Object.values(map).forEach((v) => { if (v > 0) profits.push(v); else if (v < 0) losses.push(-v); });
-    // The 90th percentile of this account's own days, rather than the single
-    // biggest win/loss — one outsized day would otherwise become the only
-    // reference point, pushing every ordinary day's ratio down near zero and
-    // collapsing them all into the same lowest color band.
-    const percentile90 = (arr) => {
-      if (arr.length === 0) return 0;
-      const sorted = [...arr].sort((a, b) => a - b);
-      return sorted[Math.min(sorted.length - 1, Math.ceil(0.9 * sorted.length) - 1)];
-    };
-    return { plByDate: map, maxProfit: percentile90(profits), maxLoss: percentile90(losses) };
-  }, [pnlEntries]);
-
-  const monthGroups = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const groups = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const cols = buildMonthColumns(d.getFullYear(), d.getMonth(), plByDate, today);
-      groups.push({ key: `${d.getFullYear()}-${d.getMonth()}`, monthIdx: d.getMonth(), cols });
-    }
-    return groups;
-  }, [plByDate]);
-
-  const GAP = 3, GROUP_GAP = 8;
-  const gridCols = monthGroups.map((g) => `${g.cols.length}fr`).join(" ");
-
-  return (
-    <div className="w-full">
-      <div className="grid" style={{ gridTemplateColumns: gridCols, gap: GROUP_GAP }}>
-        {monthGroups.map((g) => (
-          <div key={g.key} className="text-[10px] text-zinc-600 min-w-0" style={FONT_MONO}>
-            {MONTH_ABBR[g.monthIdx]}
-          </div>
-        ))}
-      </div>
-      <div className="grid mt-1.5" style={{ gridTemplateColumns: gridCols, gap: GROUP_GAP }}>
-        {monthGroups.map((g) => (
-          <div key={g.key} className="grid min-w-0" style={{ gridTemplateColumns: `repeat(${g.cols.length}, 1fr)`, gap: GAP }}>
-            {g.cols.map((col, ci) => (
-              <div key={ci} className="grid min-w-0" style={{ gap: GAP }}>
-                {col.map((day, di) => (
-                  <Tooltip
-                    key={di}
-                    text={!day ? undefined : (day.pl !== undefined ? `Gross realised P/L on ${isoToMonDDYYYY(day.iso)}: ${fmtINRsigned(day.pl)}` : `No data on ${isoToMonDDYYYY(day.iso)}`)}
-                    wrapperClassName="w-full h-full"
-                  >
-                    <div
-                      className={`w-full aspect-square rounded-sm ${day ? "hover:outline hover:outline-1 hover:outline-[var(--tj-text1)] hover:outline-offset-0" : ""} ${day && day.pl === undefined ? "tj-heat-empty" : ""}`}
-                      style={!day ? { background: "transparent" } : heatCellStyle(day.pl, maxProfit, maxLoss)}
-                    ></div>
-                  </Tooltip>
-                ))}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-});
-
-const HomePage = React.memo(function HomePage({ userProfile, totalCapital, pnlEntries, history, journeyOpen, setJourneyOpen, deepDiveOpen, setDeepDiveOpen, dueReminders, onOpenReminders }) {
-  const stats = useMemo(() => computeHomeStats(pnlEntries, history), [pnlEntries, history]);
-  const greetingName = (userProfile.nickname || "").trim() || (userProfile.name || "").trim().split(/\s+/)[0];
-  const [greetingWord] = useState(() => GREETING_WORDS[Math.floor(Math.random() * GREETING_WORDS.length)]);
-  const currentYear = new Date().getFullYear();
-  const [monthlyPLYear, setMonthlyPLYear] = useState(currentYear);
-
-  const streakRange = (range) => range && range.start && range.end
-    ? (range.start === range.end ? isoToDMY(range.start) : `${isoToDMY(range.start)} - ${isoToDMY(range.end)}`)
-    : "";
-  const roiPct = totalCapital > 0 ? (stats.totalPL / totalCapital) * 100 : null;
-
-  return (
-    <div className="space-y-7">
-      {dueReminders && dueReminders.length > 0 && <TodayReminderBanner dueReminders={dueReminders} />}
-      <div className="rounded-3xl border border-zinc-800 p-7 sm:p-8" style={{ background: "linear-gradient(to bottom right, var(--tj-panel2), var(--tj-panel))" }}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
-          <div className="min-w-0">
-            <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1.5" style={FONT_MONO}>{getGreeting()}</p>
-            <h1 className="text-2xl sm:text-3xl font-bold text-zinc-50 truncate" style={FONT_DISPLAY}>
-              {greetingName ? `${greetingWord}, ${greetingName}` : greetingWord}
-            </h1>
-            <p className="text-sm text-zinc-500 mt-1.5 italic">"{QUOTE_OF_DAY.quote}" — {QUOTE_OF_DAY.author}</p>
-          </div>
-          {onOpenReminders && <RemindersButton dueCount={dueReminders ? dueReminders.length : 0} onClick={onOpenReminders} />}
-        </div>
-      </div>
-
-      {/* Section 1 — Account Snapshot */}
-      <p className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2" style={FONT_MONO}>
-        <IconWallet size={13} /> Account Snapshot
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard icon={IconWallet} label="Total Capital" value={fmtINR(totalCapital)} />
-        <StatCard icon={stats.totalPL >= 0 ? IconTrendingUp : IconTrendingDown} label="All-Time P/L" value={fmtINRsigned(stats.totalPL)} valueColor={stats.totalPL >= 0 ? "text-[#04B488]" : "text-[#F15E3B]"} />
-        <StatCard icon={IconPercentage} label="Return on Capital" value={roiPct === null ? "—" : `${roiPct.toFixed(1)}%`} valueColor={roiPct === null ? "text-zinc-100" : roiPct >= 0 ? "text-[#04B488]" : "text-[#F15E3B]"} />
-        <StatCard icon={IconActivity} label="Open Positions" value={stats.openTrades} />
-      </div>
-
-      {/* Section 2 — Heatmap */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 sm:p-7">
-        <p className="text-xs uppercase tracking-widest text-zinc-500 mb-5 flex items-center gap-2" style={FONT_MONO}>
-          <IconActivity size={13} /> Last 12 Months' Activity
-        </p>
-        <ExitDateHeatmap pnlEntries={pnlEntries} />
-      </div>
-
-      {/* Section 3 — My Journey at a Glance (collapsible) */}
-      <CollapsibleSection title="My Journey at a Glance" icon={IconFlag} open={journeyOpen} onToggle={() => setJourneyOpen((v) => !v)}>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard icon={IconChecklist} label="Total Trades" value={stats.totalTrades} small />
-          <StatCard icon={IconTrophy} label="Wins" value={stats.wins} valueColor="text-[#04B488]" small />
-          <StatCard icon={IconAlertTriangle} label="Losses" value={stats.losses} valueColor="text-[#F15E3B]" small />
-          <StatCard icon={IconPercentage} label="Win Rate" value={stats.closedTrades > 0 ? `${stats.winRate.toFixed(0)}%` : "—"} small />
-        </div>
-
-        {stats.closedTrades > 0 && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <InsightCard label="Current Streak" value={stats.streak > 0 ? `${stats.streak} ${stats.streakType ? "Win" : "Loss"}${stats.streak === 1 ? "" : "s"}` : "—"} sub={streakRange({ start: stats.streakStartDate, end: stats.streakEndDate })} valueColor={stats.streakType ? "text-[#04B488]" : "text-[#F15E3B]"} />
-            <InsightCard label="Best Win Streak" value={stats.longestWinStreak > 0 ? `${stats.longestWinStreak} Win${stats.longestWinStreak === 1 ? "" : "s"}` : "—"} sub={streakRange(stats.bestWinStreakRange)} valueColor="text-[#04B488]" />
-            <InsightCard label="Worst Loss Streak" value={stats.longestLossStreak > 0 ? `${stats.longestLossStreak} Loss${stats.longestLossStreak === 1 ? "" : "es"}` : "—"} sub={streakRange(stats.bestLossStreakRange)} valueColor="text-[#F15E3B]" />
-            {stats.bestStrategyByPL && <InsightCard label="Most Profitable Strategy" value={stats.bestStrategyByPL[0]} sub={fmtINRsigned(stats.bestStrategyByPL[1]) + " total"} valueColor={stats.bestStrategyByPL[1] >= 0 ? "text-[#04B488]" : "text-[#F15E3B]"} />}
-          </div>
-        )}
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            {stats.topStrategy ? (
-              <InsightCard label="Most-Used Strategy" value={stats.topStrategy[0]} sub={`${stats.topStrategy[1]} trade${stats.topStrategy[1] === 1 ? "" : "s"}`} />
-            ) : (
-              <div className="rounded-2xl border border-dashed border-zinc-800 p-5 flex items-center justify-center">
-                <p className="text-xs text-zinc-600 text-center">No strategy data yet</p>
-              </div>
-            )}
-            {stats.topUnderlying ? (
-              <InsightCard label="Most-Traded Underlying" value={stats.topUnderlying[0]} sub={`${stats.topUnderlying[1]} trade${stats.topUnderlying[1] === 1 ? "" : "s"}`} />
-            ) : (
-              <div className="rounded-2xl border border-dashed border-zinc-800 p-5 flex items-center justify-center">
-                <p className="text-xs text-zinc-600 text-center">No trade data yet</p>
-              </div>
-            )}
-          </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 relative group">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2" style={FONT_MONO}>
-                <IconChartBar size={13} /> Monthly P/L
-              </p>
-              <span className="text-xs uppercase tracking-widest tj-primary-text" style={FONT_MONO}>{monthlyPLYear}</span>
-            </div>
-            <MonthlyPLChart pnlEntries={pnlEntries} year={monthlyPLYear} />
-            <button
-              onClick={() => setMonthlyPLYear((y) => y - 1)}
-              aria-label="Previous year"
-              className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center text-zinc-400 hover:text-zinc-100 opacity-0 group-hover:opacity-100 transition-opacity active:scale-95"
-            >
-              <IconChevronLeft size={26} />
-            </button>
-            <button
-              onClick={() => setMonthlyPLYear((y) => Math.min(currentYear, y + 1))}
-              disabled={monthlyPLYear >= currentYear}
-              aria-label="Next year"
-              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center text-zinc-400 hover:text-zinc-100 opacity-0 group-hover:opacity-100 transition-opacity active:scale-95 disabled:opacity-0 disabled:group-hover:opacity-0 disabled:pointer-events-none"
-            >
-              <IconChevronRight size={26} />
-            </button>
-          </div>
-        </div>
-
-        {(stats.bestTrade || stats.worstTrade || stats.mostActiveMonth) && (
-          <div className="grid sm:grid-cols-3 gap-4">
-            {stats.bestTrade && <InsightCard label="Best Trade" value={fmtINRsigned(parseFloat(stats.bestTrade.overallPL))} sub={`${isoToDMY(stats.bestTrade.entryDate)} · ${stats.bestTrade.underlying || ""}`} valueColor="text-[#04B488]" />}
-            {stats.worstTrade && <InsightCard label="Toughest Trade" value={fmtINRsigned(parseFloat(stats.worstTrade.overallPL))} sub={`${isoToDMY(stats.worstTrade.entryDate)} · ${stats.worstTrade.underlying || ""}`} valueColor="text-[#F15E3B]" />}
-            {stats.mostActiveMonth && <InsightCard label="Most Active Month" value={`${MONTH_ABBR[parseInt(stats.mostActiveMonth[0].slice(5, 7), 10) - 1]} ${stats.mostActiveMonth[0].slice(0, 4)}`} sub={`${stats.mostActiveMonth[1]} trade${stats.mostActiveMonth[1] === 1 ? "" : "s"}`} />}
-          </div>
-        )}
-
-        {stats.totalTrades === 0 && (
-          <div className="rounded-2xl border border-dashed border-zinc-800 p-10 text-center">
-            <p className="text-sm text-zinc-500">No trades logged yet.</p>
-            <p className="text-xs text-zinc-600 mt-1">This section fills in on its own as you log trades.</p>
-          </div>
-        )}
-      </CollapsibleSection>
-
-      {/* Section 4 — Deeper into the Numbers (collapsible) */}
-      <CollapsibleSection title="Deeper into the Numbers" icon={IconCalculator} open={deepDiveOpen} onToggle={() => setDeepDiveOpen((v) => !v)}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatCard icon={IconCalculator} label="Avg P/L per Trade" value={stats.closedTrades >= 3 ? fmtINRsigned(stats.avgPL) : "—"} valueColor={stats.closedTrades >= 3 && stats.avgPL >= 0 ? "text-[#04B488]" : stats.closedTrades >= 3 ? "text-[#F15E3B]" : "text-zinc-100"} small
-              info={stats.closedTrades >= 3 ? "Average profit or loss across all closed trades — your typical per-trade outcome." : "Shown once you have at least 3 closed trades."} />
-            <StatCard icon={IconTarget} label="Profit Factor" value={stats.wins < 2 || stats.losses < 2 ? "—" : (stats.profitFactor === null ? "∞" : stats.profitFactor.toFixed(2))} valueColor={stats.wins < 2 || stats.losses < 2 ? "text-zinc-100" : (stats.profitFactor === null || stats.profitFactor >= 1 ? "text-[#04B488]" : "text-[#F15E3B]")} small
-              info={stats.wins < 2 || stats.losses < 2 ? "Shown once you have at least 2 wins and 2 losses." : "Gross profit divided by gross loss. Above 1 means your wins outweigh your losses overall."} />
-            <StatCard icon={IconTrendingUp} label="Avg Win" value={stats.wins >= 2 ? fmtINR(stats.avgWin) : "—"} valueColor={stats.wins >= 2 ? "text-[#04B488]" : "text-zinc-100"} small
-              info={stats.wins >= 2 ? "Average size of your winning trades only." : "Shown once you have at least 2 winning trades."} />
-            <StatCard icon={IconTrendingDown} label="Avg Loss" value={stats.losses >= 2 ? fmtINR(stats.avgLoss) : "—"} valueColor={stats.losses >= 2 ? "text-[#F15E3B]" : "text-zinc-100"} small
-              info={stats.losses >= 2 ? "Average size of your losing trades only, shown as a positive magnitude." : "Shown once you have at least 2 losing trades."} />
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="tj-info-card relative rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 hover:border-zinc-700 transition-colors">
-              <div className="absolute top-3 right-3"><InfoIcon text="Average number of days between entering and exiting a trade, split by whether it ended as a win or a loss. Each side needs at least 2 trades." /></div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <IconClock size={14} className="tj-primary-text flex-shrink-0" />
-                <span className="text-[11px] uppercase tracking-wide text-zinc-500 truncate pr-4" style={FONT_MONO}>Avg Hold Time</span>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10px] text-zinc-500 truncate">Winners</span>
-                  <span className="text-sm font-bold flex-shrink-0 text-[#04B488]" style={FONT_MONO}>
-                    {stats.wins < 2 || stats.avgHoldWinners === null ? "—" : `${stats.avgHoldWinners.toFixed(1)}d`}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10px] text-zinc-500 truncate">Losers</span>
-                  <span className="text-sm font-bold flex-shrink-0 text-[#F15E3B]" style={FONT_MONO}>
-                    {stats.losses < 2 || stats.avgHoldLosers === null ? "—" : `${stats.avgHoldLosers.toFixed(1)}d`}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <StatCard icon={IconPercentage} label="Win/Loss Ratio" value={stats.wins < 2 || stats.losses < 2 ? "—" : (stats.winLossRatio === null ? "∞" : `${stats.winLossRatio.toFixed(2)}x`)} valueColor={stats.wins < 2 || stats.losses < 2 ? "text-zinc-100" : (stats.winLossRatio === null || stats.winLossRatio >= 1 ? "text-[#04B488]" : "text-[#F15E3B]")} small
-              info={stats.wins < 2 || stats.losses < 2 ? "Shown once you have at least 2 wins and 2 losses." : "Average win size divided by average loss size — how much bigger your typical win is than your typical loss."} />
-            <StatCard icon={IconCalculator} label="Expectancy" value={stats.closedTrades >= 5 ? fmtINRsigned(stats.expectancy) : "—"} valueColor={stats.closedTrades >= 5 ? (stats.expectancy >= 0 ? "text-[#04B488]" : "text-[#F15E3B]") : "text-zinc-100"} small
-              info={stats.closedTrades >= 5 ? "Expected P/L per trade, combining your win rate with your average win and loss size. Positive means the system is profitable on average." : "Shown once you have at least 5 closed trades."} />
-            <StatCard icon={IconChartBar} label="Median P/L" value={stats.closedTrades >= 3 ? fmtINRsigned(stats.medianPL) : "—"} valueColor={stats.closedTrades >= 3 ? (stats.medianPL >= 0 ? "text-[#04B488]" : "text-[#F15E3B]") : "text-zinc-100"} small
-              info={stats.closedTrades >= 3 ? "The middle value of all trade outcomes — less skewed by one huge win or loss than the average." : "Shown once you have at least 3 closed trades."} />
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatCard icon={IconTrendingDown} label="Max Drawdown" value={stats.closedTrades >= 3 ? fmtINR(stats.maxDrawdown) : "—"} valueColor={stats.closedTrades >= 3 ? "text-[#F15E3B]" : "text-zinc-100"} small
-              info={stats.closedTrades >= 3 ? "The largest peak-to-trough decline in your cumulative P/L so far — your worst losing stretch by rupee value." : "Shown once you have at least 3 closed trades."} />
-            <StatCard icon={IconActivity} label="Avg Trades / Month" value={stats.totalTrades >= 3 ? stats.avgTradesPerMonth.toFixed(1) : "—"} small
-              info={stats.totalTrades >= 3 ? "Total trades divided by the number of months since your first trade — a measure of how active you've been." : "Shown once you have at least 3 trades logged."} />
-            <StatCard
-              icon={IconPercentage} label="Recent Form" value={stats.closedTrades < 5 || stats.recentWinRate === null ? "—" : `${stats.recentWinRate.toFixed(0)}%`}
-              valueColor={stats.closedTrades < 5 || stats.recentWinRate === null ? "text-zinc-100" : stats.recentWinRate >= stats.winRate ? "text-[#04B488]" : "text-[#F15E3B]"}
-              small info={stats.closedTrades < 5 ? "Shown once you have at least 5 closed trades." : "Win rate over your last 10 closed trades, compared against your all-time win rate — shows whether you're trending better or worse lately."} />
-            <div className="tj-info-card relative rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 hover:border-zinc-700 transition-colors">
-              <div className="absolute top-3 right-3"><InfoIcon text={stats.closedTrades >= 3 ? "Your single best-performing calendar week and calendar month, by total P/L." : "Shown once you have at least 3 closed trades."} /></div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <IconFlag size={14} className="tj-primary-text flex-shrink-0" />
-                <span className="text-[11px] uppercase tracking-wide text-zinc-500 truncate pr-4" style={FONT_MONO}>Best Week / Month</span>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10px] text-zinc-500 truncate">{stats.closedTrades >= 3 && stats.bestWeek ? stats.bestWeek.label : "Week"}</span>
-                  <span className={`text-sm font-bold flex-shrink-0 ${stats.closedTrades >= 3 && stats.bestWeek ? (stats.bestWeek.pl >= 0 ? "text-[#04B488]" : "text-[#F15E3B]") : "text-zinc-100"}`} style={FONT_MONO}>
-                    {stats.closedTrades >= 3 && stats.bestWeek ? fmtINRsigned(stats.bestWeek.pl) : "—"}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10px] text-zinc-500 truncate">{stats.closedTrades >= 3 && stats.bestMonth ? stats.bestMonth.label : "Month"}</span>
-                  <span className={`text-sm font-bold flex-shrink-0 ${stats.closedTrades >= 3 && stats.bestMonth ? (stats.bestMonth.pl >= 0 ? "text-[#04B488]" : "text-[#F15E3B]") : "text-zinc-100"}`} style={FONT_MONO}>
-                    {stats.closedTrades >= 3 && stats.bestMonth ? fmtINRsigned(stats.bestMonth.pl) : "—"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="tj-info-card relative rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 hover:border-zinc-700 transition-colors">
-              <div className="absolute top-3 right-3"><InfoIcon text="Compares the max loss you committed to at checklist time against what actually happened, for losing trades where a plan was recorded. Needs at least 3 such trades." /></div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <IconShield size={14} className="tj-primary-text flex-shrink-0" />
-                <span className="text-[11px] uppercase tracking-wide text-zinc-500 truncate pr-4" style={FONT_MONO}>Stop-Loss Discipline</span>
-              </div>
-              {stats.slPlannedCount < 3 ? (
-                <p className="text-xs text-zinc-600">Shown once you have at least 3 losing trades with a recorded plan.</p>
-              ) : (
-                <div className="space-y-1.5">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[10px] text-zinc-500 truncate">Exceeded Plan</span>
-                    <span className={`text-sm font-bold flex-shrink-0 ${stats.slExceededCount === 0 ? "text-[#04B488]" : "text-[#F15E3B]"}`} style={FONT_MONO}>
-                      {stats.slExceededCount}/{stats.slPlannedCount} trades
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[10px] text-zinc-500 truncate">Avg Overshoot</span>
-                    <span className={`text-sm font-bold flex-shrink-0 ${stats.slExceededCount === 0 ? "text-zinc-100" : "text-[#F15E3B]"}`} style={FONT_MONO}>
-                      {stats.slExceededCount === 0 ? "—" : fmtINR(stats.slAvgOvershoot)}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="tj-info-card relative rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 hover:border-zinc-700 transition-colors">
-              <div className="absolute top-3 right-3"><InfoIcon text="Average P/L and win rate grouped by the mood recorded when each trade was closed. Only moods with at least 3 trades are shown." /></div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <IconMoodSmile size={14} className="tj-primary-text flex-shrink-0" />
-                <span className="text-[11px] uppercase tracking-wide text-zinc-500 truncate pr-4" style={FONT_MONO}>Mood vs Performance</span>
-              </div>
-              {stats.moodStats.length === 0 ? (
-                <p className="text-xs text-zinc-600">Not enough exit-mood data yet.</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {stats.moodStats.map((m) => (
-                    <div key={m.mood} className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-1.5 text-[11px] text-zinc-400 truncate">
-                        <MoodEmoji id={m.mood} size={14} /> {moodMeta(m.mood)?.label} <span className="text-zinc-600">· {m.count}</span>
-                      </span>
-                      <span className={`text-xs font-bold flex-shrink-0 ${m.avgPL >= 0 ? "text-[#04B488]" : "text-[#F15E3B]"}`} style={FONT_MONO}>
-                        {fmtINRsigned(m.avgPL)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </CollapsibleSection>
-    </div>
-  );
-});
 
 function LegsEditDialog({ initialUnderlying, initialLegs, onSave, onClose, holidays, referenceDate, lockOriginalLegs, committedLegIds, strategyLabel, allStrategies }) {
   const [underlying, setUnderlying] = useState(initialUnderlying || "");
@@ -2177,21 +1762,6 @@ const WHEEL_HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const WHEEL_MINUTES = Array.from({ length: 60 }, (_, i) => i);
 const WHEEL_AMPM = ["AM", "PM"];
 
-function parseReminderTime(value) {
-  const match = (value || "").match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!match) return [5, 0, "AM"];
-  return [Math.min(12, Math.max(1, parseInt(match[1], 10))), Math.min(59, Math.max(0, parseInt(match[2], 10))), match[3].toUpperCase()];
-}
-
-// "H:MM AM/PM" for right now — used as the default time whenever a
-// reminder form opens without an existing time to prefill from.
-function currentTimeString() {
-  const d = new Date();
-  const h24 = d.getHours();
-  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  return `${h12}:${String(d.getMinutes()).padStart(2, "0")} ${h24 < 12 ? "AM" : "PM"}`;
-}
-
 function TimeWheelField({ value, onChange, error = false }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState(null);
@@ -2399,44 +1969,6 @@ function ReminderPill({ severity, label }) {
 // into a real epoch-ms moment, for comparing against "now". Returns null
 // for a reminder with no time set — those are day-level notes, not
 // alarms with a specific moment to fire at.
-function reminderCombinedEpoch(reminder) {
-  if (!reminder.date || !reminder.time) return null;
-  const [y, mo, d] = reminder.date.split("-").map(Number);
-  const [h12, m, ap] = parseReminderTime(reminder.time);
-  let h24 = h12 % 12;
-  if (ap === "PM") h24 += 12;
-  return new Date(y, mo - 1, d, h24, m, 0, 0).getTime();
-}
-
-// "It's time" for a freshly-triggered alarm; "N ago" for one discovered
-// late (app was closed or the user wasn't logged in when it fired).
-function reminderRelativeAgo(epochMs) {
-  const diffMs = Date.now() - epochMs;
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 2) return null;
-  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
-  const months = Math.floor(days / 30);
-  return `${months} month${months === 1 ? "" : "s"} ago`;
-}
-
-function reminderDayLabel(daysUntil, isoDate) {
-  if (daysUntil === 0) return "Today";
-  if (daysUntil === 1) return "Tomorrow";
-  if (daysUntil === -1) return "Yesterday";
-  return isoToWordDate(isoDate);
-}
-
-// "9:00 PM" -> "9 PM" (on-the-hour reads more naturally without ":00"),
-// but "9:30 PM" stays as-is since the minutes actually matter there.
-function reminderTimeDisplay(time) {
-  if (!time) return "";
-  return time.replace(/:00(\s*[AP]M)$/i, "$1");
-}
-
 function ReminderRowDisplay({ r, onDelete, onEdit }) {
   const s = REMINDER_SEVERITY[r.severity];
   const dayLabel = reminderDayLabel(r.daysUntil, r.date);
@@ -3083,22 +2615,6 @@ function EditCategoriesPage({ onBack, effectiveGroups, reminderSeverityFor, onCh
   );
 }
 
-function RemindersButton({ dueCount, onClick }) {
-  return (
-    <Tooltip text="My Reminders">
-      <button onClick={onClick} className="relative flex items-center gap-1.5 text-xs bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 font-semibold rounded-xl pl-3.5 pr-5 py-2 transition-colors hover:scale-[1.02] active:scale-95">
-        <IconBellRinging size={14} />
-        My Reminders
-        {dueCount > 0 && (
-          <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center border-2" style={{ ...FONT_MONO, borderColor: "var(--tj-bg, #15152b)" }}>
-            {dueCount > 9 ? "9+" : dueCount}
-          </span>
-        )}
-      </button>
-    </Tooltip>
-  );
-}
-
 // Builds a lookup of every day in the given month that has something on
 // it — reminders (by severity), position expiries (from pnlEntries, both
 // open and closed — this is "for future and past reminders... with my
@@ -3113,16 +2629,6 @@ function buildReminderDayMap(remindersWithDays, pnlEntries, holidays) {
   (pnlEntries || []).forEach((e) => { if (e.expiryDate) ensure(e.expiryDate).expiries.push(e); });
   (holidays || []).forEach((h) => { if (h.date) ensure(h.date).holiday = h; });
   return map;
-}
-
-// "9:00 PM" -> 21, "5:00 AM" -> 5. Reuses the same parser the time wheel
-// picker itself uses, so this always agrees with what's actually stored.
-function reminderTimeToHour24(time) {
-  if (!time) return null;
-  const [h12, , ap] = parseReminderTime(time);
-  let hour = h12 % 12;
-  if (ap === "PM") hour += 12;
-  return hour;
 }
 
 function CalendarViewSwitcher({ view, setView }) {
@@ -3739,55 +3245,6 @@ function ReminderAlarmPopup({ dueAlarms, onClose, onCloseAll, onSnoozeMinutes, o
 // Top-right toast stack for reminders entering their lead-time window.
 // Each toast auto-dismisses after a few seconds and plays a soft pop sound
 // the moment it appears (distinct from the alarm popup's chime).
-
-function TodayReminderBanner({ dueReminders }) {
-  const todayKey = localISODate(Date.now());
-  // Keyed by reminder ID -> the scheduled-moment key it was dismissed for.
-  // Editing a reminder to a new time changes its key, so a dismissed,
-  // elapsed reminder that gets moved to a future time today naturally
-  // reappears — no special-casing needed beyond just comparing keys.
-  const [dismissedFor, setDismissedFor] = useState(() => {
-    try {
-      const raw = localStorage.getItem("tj-reminders-banner-dismissed");
-      const parsed = raw ? JSON.parse(raw) : null;
-      if (parsed && parsed.day === todayKey && parsed.map && typeof parsed.map === "object") return parsed.map;
-      return {};
-    } catch { return {}; }
-  });
-  const momentKey = (r) => (r.time ? String(reminderCombinedEpoch(r)) : `${r.date}-noTime`);
-  const now = Date.now();
-  // Elapsed (time already passed today) reminders never show, regardless
-  // of dismissal state — unless editing has moved them to a future moment.
-  const notElapsed = dueReminders.filter((r) => !r.time || reminderCombinedEpoch(r) >= now);
-  const visibleReminders = notElapsed.filter((r) => dismissedFor[r.id] !== momentKey(r));
-  if (visibleReminders.length === 0) return null;
-  const dismiss = () => {
-    const next = { ...dismissedFor };
-    notElapsed.forEach((r) => { next[r.id] = momentKey(r); });
-    setDismissedFor(next);
-    try { localStorage.setItem("tj-reminders-banner-dismissed", JSON.stringify({ day: todayKey, map: next })); } catch {}
-  };
-  return (
-    <div className="rounded-2xl border border-amber-400/30 bg-amber-400/[0.06] p-4 flex items-start gap-3">
-      <div className="w-8 h-8 rounded-full bg-amber-400/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <IconClock size={16} className="text-amber-400" />
-      </div>
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <p className="text-sm text-zinc-100 font-semibold">{visibleReminders.length} reminder{visibleReminders.length === 1 ? "" : "s"} need attention</p>
-        {visibleReminders.map((r) => {
-          const s = REMINDER_SEVERITY[r.severity];
-          const dayLabel = r.daysUntil <= 1 ? reminderDayLabel(r.daysUntil, r.date).toLowerCase() : isoToWordDate(r.date);
-          return (
-            <p key={r.id} className="text-xs text-zinc-400">
-              <span className={`font-semibold ${s.text}`}>{r.title}</span> — {dayLabel}{r.time ? `, ${reminderTimeDisplay(r.time)}` : ""}
-            </p>
-          );
-        })}
-      </div>
-      <button onClick={dismiss} className="text-zinc-500 hover:text-zinc-300 flex-shrink-0" title="Dismiss for today"><IconX size={14} /></button>
-    </div>
-  );
-}
 
 // Small status glyph shown next to each leg in the Trade History Legs
 // column — a quick-scan visual for what happened to that leg without
