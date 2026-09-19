@@ -46,6 +46,8 @@ import {
 } from "./lib/exportEngine.js";
 import { Tooltip } from "./components/shared/Tooltip.jsx";
 import { InfoIcon } from "./components/shared/InfoIcon.jsx";
+import { TabBar } from "./components/shared/TabBar.jsx";
+import { CollapsibleSection, CollapsibleRegion } from "./components/shared/CollapsibleSection.jsx";
 import { MOOD_OPTIONS, moodMeta, TWEMOJI_CDN } from "./lib/moodOptions.js";
 import { DATA_ROWS, RADIO_OPTIONS, dataReadLabel, getVerdict } from "./lib/marketRead.js";
 import {
@@ -742,26 +744,6 @@ function ChecklistManagerTab({ sections, onAddItem, onEditItem, onDeleteItem, on
   );
 }
 
-function TabBar({ tabs, activeTab, onSelect }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => onSelect(t.id)}
-          className={`flex items-center gap-1.5 text-xs px-3.5 py-2.5 rounded-xl border whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
-            activeTab === t.id ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"
-          }`}
-        >
-          {t.num && <span style={FONT_MONO} className={activeTab === t.id ? "opacity-100" : "opacity-80"}>{t.num}</span>}
-          {t.label}
-          <span className="text-[10px]" style={FONT_MONO}>{t.badge}</span>
-          {t.warn && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0"></span>}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 const DEFAULT_AVATAR = { id: "f5", hair: "long", colors: ["#14b8a6", "#0f766e"] };
 
@@ -1603,107 +1585,6 @@ const InsightCard = React.memo(function InsightCard({ label, value, sub, valueCo
   );
 });
 
-function CollapsibleSection({ title, icon: Icon, open, onToggle, children }) {
-  const containerRef = useRef(null);
-  const [overflowVisible, setOverflowVisible] = useState(open);
-
-  useEffect(() => {
-    if (open) {
-      // Keep content clipped until the grid has actually finished growing
-      // to fit it — removing the clip immediately let content visually pop
-      // into full view before the row height had caught up, making the
-      // expand look instant instead of smooth.
-      const t = setTimeout(() => setOverflowVisible(true), 750);
-      return () => clearTimeout(t);
-    }
-    setOverflowVisible(false); // closing — clip immediately, no animation to wait for
-  }, [open]);
-
-  const handleToggle = () => {
-    const wasOpen = open;
-    onToggle();
-    if (!wasOpen) {
-      // Opening from closed — scroll so the section comes into view as it
-      // expands, rather than leaving the user to scroll down manually.
-      // A single early scroll attempt gets clamped when this section is
-      // near the bottom of the page: at that moment the page hasn't grown
-      // tall enough yet (the content hasn't expanded), so the browser
-      // can't scroll as far as the target requires. Re-asserting the
-      // target every frame across the animation lets the scroll catch up
-      // naturally as the page grows.
-      const el = containerRef.current;
-      if (!el) return;
-      const NAVBAR_OFFSET = 88;
-      const DURATION = 780;
-      const start = performance.now();
-      const tick = () => {
-        const rect = el.getBoundingClientRect();
-        const targetY = window.scrollY + rect.top - NAVBAR_OFFSET;
-        window.scrollTo({ top: Math.max(0, targetY) });
-        if (performance.now() - start < DURATION) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    }
-  };
-
-  return (
-    <div ref={containerRef} style={{ scrollMarginTop: "88px" }}>
-      <button onClick={handleToggle} className="tj-section-toggle flex items-center justify-between w-full group px-6 sm:px-7 py-3 rounded-xl transition-colors">
-        <p className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2 group-hover:text-zinc-300 transition-colors" style={FONT_MONO}>
-          <Icon size={13} /> {title}
-        </p>
-        <IconChevronDown size={16} className={`text-zinc-500 group-hover:text-zinc-300 transition-transform duration-[750ms] ${open ? "" : "-rotate-90"}`} />
-      </button>
-      <div
-        className="grid"
-        style={{
-          gridTemplateRows: open ? "1fr" : "0fr",
-          marginTop: open ? "1rem" : "0px",
-          transition: "grid-template-rows 750ms ease-in-out, margin-top 750ms ease-in-out",
-        }}
-      >
-        <div className={overflowVisible ? "min-h-0" : "overflow-hidden min-h-0"}>
-          <div className="space-y-4 pt-0.5">{children}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Same grid-rows grow animation as CollapsibleSection (0fr -> 1fr, with
-// overflow clipped until the transition finishes so content doesn't pop
-// into full view early) but with no scroll-into-view behavior — meant to
-// be remounted via a changing `key` on the caller's side, so switching to
-// different content triggers a fresh "grow into view" each time rather
-// than an instant swap.
-// Same grid-rows grow/shrink mechanism as CollapsibleSection (0fr <-> 1fr,
-// with overflow clipped until the transition finishes) but as a persistent
-// element whose `open` state toggles — never unmounted/remounted — so
-// toggling smoothly collapses and expands the same content both ways,
-// with no scroll-into-view behavior. `animated={false}` snaps instantly
-// instead, for the case where this region shouldn't visibly animate at all.
-function CollapsibleRegion({ open, animated, duration = 750, children }) {
-  const [overflowVisible, setOverflowVisible] = useState(open);
-  useEffect(() => {
-    if (open) {
-      const t = setTimeout(() => setOverflowVisible(true), animated ? duration : 0);
-      return () => clearTimeout(t);
-    }
-    setOverflowVisible(false);
-  }, [open, animated, duration]);
-
-  return (
-    <div
-      className="grid overflow-x-hidden"
-      style={{
-        gridTemplateRows: open ? "1fr" : "0fr",
-        transition: animated ? `grid-template-rows ${duration}ms ease-in-out` : "none",
-      }}
-    >
-      <div className={overflowVisible ? "min-h-0" : "overflow-hidden min-h-0"}>{children}</div>
-    </div>
-  );
-}
 
 const MonthlyPLChart = React.memo(function MonthlyPLChart({ pnlEntries, year }) {
   const { months, plByMonth, maxAbs } = useMemo(() => {
