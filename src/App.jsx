@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import {
-  IconActivity, IconAdjustmentsHorizontal, IconAlertTriangle, IconArrowLeft, IconArrowsExchange, IconBell, IconBellRinging, IconBooks,
-  IconCalculator, IconCalendar, IconCamera, IconChartBar, IconCheck, IconChecklist,
-  IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronUp, IconChevronsDown, IconChevronsUp, IconClock, IconClockHour4, IconCopy, IconCrosshair,
-  IconDeviceDesktop, IconDeviceFloppy, IconDotsVertical, IconDownload, IconExternalLink, IconFilePlus, IconFileText,
-  IconFlag, IconFolder, IconFolderPlus, IconFolderSymlink, IconGitBranch, IconLayoutGrid, IconLink, IconList, IconLoader2, IconLock,
-  IconMoodSmile, IconPalette, IconPencil, IconPercentage, IconPlus, IconPointFilled, IconRotate,
-  IconSearch, IconSettings2, IconShield, IconStack2, IconStar, IconStarFilled,
-  IconTag, IconTarget, IconTerminal2, IconTrash, IconTrendingDown, IconTrendingUp, IconTrophy,
+  IconActivity, IconArrowsExchange, IconBell, IconBellRinging, IconBooks,
+  IconCalendar, IconCamera, IconChartBar, IconCheck, IconChecklist,
+  IconChevronDown, IconChevronLeft, IconChevronUp, IconChevronsDown, IconChevronsUp, IconClock, IconClockHour4, IconCopy, IconCrosshair,
+  IconDeviceDesktop, IconDotsVertical, IconExternalLink, IconFilePlus, IconFileText,
+  IconFolder, IconFolderPlus, IconFolderSymlink, IconGitBranch, IconLayoutGrid, IconLink, IconList, IconLoader2, IconLock,
+  IconMoodSmile, IconPalette, IconPercentage, IconPointFilled, IconRotate,
+  IconSearch, IconShield, IconStack2, IconStar, IconStarFilled,
+  IconTag, IconTerminal2, IconTrendingDown, IconTrendingUp, IconTrophy,
   IconUserCircle, IconUserOff, IconWallet, IconX,
 } from "@tabler/icons-react";
 import logo from "./assets/logo.png";
@@ -31,7 +31,10 @@ import { IncompleteChecklistDialog } from "./shell/components/IncompleteChecklis
 import { AddTradeDialog } from "./shell/components/AddTradeDialog.jsx";
 import { DownloadLogDialog } from "./shell/components/DownloadLogDialog.jsx";
 import { TopNavBar } from "./shell/components/TopNavBar.jsx";
-import { FONT_DISPLAY, FONT_MONO, fmt2dp, fmtINR, fmtINRsigned, fmtHour12, formatRelativeTime } from "./lib/format.js";
+import { TradeSetupPage } from "./pages/tradeSetup/TradeSetupPage.jsx";
+import { ChecklistPage } from "./pages/checklist/ChecklistPage.jsx";
+import { TradeLogPage } from "./pages/tradeLog/TradeLogPage.jsx";
+import { FONT_DISPLAY, FONT_MONO, fmt2dp, fmtINRsigned, fmtHour12, formatRelativeTime } from "./lib/format.js";
 import {
   tradeRowToJs, tradeJsToRow, reminderRowToJs, reminderJsToRow, fundTxRowToJs, fundTxJsToRow,
   noteRowToJs, noteJsToRow, folderRowToJs, folderJsToRow, historyRowToJs, historyJsToRow,
@@ -42,7 +45,7 @@ import {
   parseReminderTime, currentTimeString, reminderCombinedEpoch, reminderRelativeAgo, reminderDayLabel, reminderTimeDisplay, reminderTimeToHour24,
 } from "./lib/reminderTime.js";
 import {
-  DEFAULT_STRATEGIES, STRATEGY_CATEGORIES, PROFILE_OPTIONS, inferStrategyProfile, describeInferredProfile, LEG_TEMPLATES,
+  DEFAULT_STRATEGIES, PROFILE_OPTIONS, inferStrategyProfile, describeInferredProfile, LEG_TEMPLATES,
   slugify, makeUniqueId, DEFAULT_SECTION_DEFS, CHECKLIST_PROFILE_OPTIONS, freshChecklistItemId, CUSTOM_SECTION_COLORS, buildEffectiveSections,
 } from "./lib/checklistLogic.js";
 import {
@@ -50,37 +53,25 @@ import {
 } from "./lib/greeks.js";
 import { computeHomeStats, heatCellStyle, buildMonthColumns } from "./lib/homeStats.js";
 import {
-  createPdfDoc, logCategoryName, pastTradeTitle, buildLegChangeEvents, buildLogDetailPDF, buildLogsDetailPDF,
+  createPdfDoc, logCategoryName, buildLegChangeEvents, buildLogDetailPDF, buildLogsDetailPDF,
   buildMarkdownFromHistory, compareTradesNewestFirst, pnlGroupsByMonth, getTradeStatus, buildPnlMarkdown, buildPnlDetailPDF,
   freshLegId, legsFromTemplate, freshPnlId, freshNoteId, freshReminderId, freshFolderId, renderBlockNoteBlocksToPDF, buildNotePDF,
 } from "./lib/exportEngine.js";
 import { Tooltip } from "./components/shared/Tooltip.jsx";
 import { InfoIcon } from "./components/shared/InfoIcon.jsx";
-import { TabBar } from "./components/shared/TabBar.jsx";
-import { CollapsibleSection, CollapsibleRegion } from "./components/shared/CollapsibleSection.jsx";
+import { CollapsibleSection } from "./components/shared/CollapsibleSection.jsx";
 import { PinDigitInput } from "./components/shared/PinDigitInput.jsx";
-import { MoodEmoji } from "./components/shared/MoodEmoji.jsx";
 import { MoodPickerButton } from "./components/shared/MoodPickerButton.jsx";
-import { CalendarPicker, buildCalendarWeeks, CALENDAR_DOW_LABELS, CALENDAR_EST_HEIGHT } from "./components/shared/CalendarPicker.jsx";
 import { MonthPicker } from "./components/shared/MonthPicker.jsx";
 import { YearPicker } from "./components/shared/YearPicker.jsx";
 import { ExpiryPicker } from "./components/shared/ExpiryPicker.jsx";
 import { lockPageScroll, unlockPageScroll } from "./lib/scrollLock.js";
 import { CompactFilterButton } from "./components/shared/CompactFilterButton.jsx";
-import { DropdownFilterButton } from "./components/shared/DropdownFilterButton.jsx";
 import { ThemedSelect } from "./components/shared/ThemedSelect.jsx";
 import { ToastStack } from "./components/shared/ToastStack.jsx";
 import { TemplatePickerModal } from "./components/shared/TemplatePickerModal.jsx";
-import { ExpandableNoteField } from "./components/shared/ExpandableNoteField.jsx";
-import { TradeScreenshotsButton } from "./components/shared/TradeScreenshotsButton.jsx";
 import { StrategyPicker } from "./components/shared/StrategyPicker.jsx";
-import { LegsCard } from "./components/shared/LegsCard.jsx";
 import { LegsTimelineModal } from "./components/shared/LegsTimelineModal.jsx";
-import { DataInterpretationSection } from "./pages/checklist/components/DataInterpretationSection.jsx";
-import { ChecklistTabPanel } from "./pages/checklist/components/ChecklistTabPanel.jsx";
-import { ChecklistManagerTab } from "./pages/checklist/components/ChecklistManagerTab.jsx";
-import { DaysToExpiryWidget } from "./pages/tradeSetup/components/DaysToExpiryWidget.jsx";
-import { CustomStrategyDialog } from "./pages/tradeSetup/components/CustomStrategyDialog.jsx";
 import { RemindersPage } from "./pages/reminders/RemindersPage.jsx";
 import { AddReminderPage } from "./pages/reminders/AddReminderPage.jsx";
 import { RescheduleReminderPage } from "./pages/reminders/RescheduleReminderPage.jsx";
@@ -95,7 +86,6 @@ import { DocsPage } from "./pages/docs/DocsPage.jsx";
 import { HolidayCalendarPage } from "./pages/holidays/HolidayCalendarPage.jsx";
 import { SettingsPage } from "./pages/settings/SettingsPage.jsx";
 import { HomePage } from "./pages/home/HomePage.jsx";
-import { MOOD_OPTIONS, moodMeta, TWEMOJI_CDN } from "./lib/moodOptions.js";
 import { DATA_ROWS, RADIO_OPTIONS, dataReadLabel, getVerdict } from "./lib/marketRead.js";
 import {
   MONTH_NAMES, MONTH_ABBR, EXPIRY_DOW_CUTOVER, localISODate,
@@ -566,152 +556,6 @@ function PreTradeChecklist({ session, pinRecord, onPinChanged, securityQuestions
     !monthlyChargesLoading && !capitalBaseLoading && !fundTransactionsLoading &&
     !holidaysLoading && !profileLoading && !homePrefsLoading && !notesLoading && !foldersLoading;
 
-  const tradeLogSection = (
-          <div key="log" className="tj-fade space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-zinc-200" style={FONT_DISPLAY}>Trade Log</p>
-              <button onClick={() => setTopTab("pnl")} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
-                <IconArrowLeft size={13} /> Back to Trade History
-              </button>
-            </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 space-y-2.5">
-              <p className="text-xs uppercase tracking-widest text-zinc-500" style={FONT_MONO}>Download Logs</p>
-              <div className="flex flex-wrap gap-1.5">
-                <button onClick={() => { setPresetToday(); setLogRangeCustomOpen(false); }} className={`text-xs px-2.5 py-1 rounded-full border ${!logRangeCustomOpen && activeRangePreset === "today" ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"}`}>Today</button>
-                <button onClick={() => { setPresetWeek(); setLogRangeCustomOpen(false); }} className={`text-xs px-2.5 py-1 rounded-full border ${!logRangeCustomOpen && activeRangePreset === "week" ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"}`}>Last 7 days</button>
-                <button onClick={() => { setPresetMonth(); setLogRangeCustomOpen(false); }} className={`text-xs px-2.5 py-1 rounded-full border ${!logRangeCustomOpen && activeRangePreset === "month" ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"}`}>Last 30 days</button>
-                <button onClick={() => setLogRangeCustomOpen(true)} className={`text-xs px-2.5 py-1 rounded-full border ${logRangeCustomOpen ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"}`}>Select Dates</button>
-                <button onClick={() => { setPresetAll(); setLogRangeCustomOpen(false); }} className={`text-xs px-2.5 py-1 rounded-full border ${!logRangeCustomOpen && activeRangePreset === "all" ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"}`}>All time</button>
-              </div>
-              {logRangeCustomOpen && (
-                <div className="flex flex-wrap items-end gap-2.5">
-                  <label className="text-xs text-zinc-500">From
-                    <div className="mt-1"><CalendarPicker value={rangeFrom} onChange={setRangeFrom} maxDate={localISODate(Date.now())} holidays={holidays} highlightNonBusinessDays placeholder="Select date" /></div>
-                  </label>
-                  <label className="text-xs text-zinc-500">To
-                    <div className="mt-1"><CalendarPicker value={rangeTo} onChange={setRangeTo} maxDate={localISODate(Date.now())} holidays={holidays} highlightNonBusinessDays placeholder="Select date" /></div>
-                  </label>
-                </div>
-              )}
-              <button onClick={openDownloadDialog} disabled={filtered.length === 0} className="flex items-center gap-1.5 text-xs tj-primary-bg disabled:opacity-40 font-semibold rounded-lg px-3.5 py-2 hover:scale-[1.03] active:scale-95 transition-transform">
-                <IconDownload size={12} /> Download
-              </button>
-              <p className="text-xs text-zinc-600">{filtered.length} {filtered.length === 1 ? "entry" : "entries"} in range</p>
-
-              <div className="pt-2.5 border-t border-zinc-800 flex flex-wrap gap-2">
-                <DropdownFilterButton
-                  label="Mindset" active={!!moodFilterPoint}
-                  displayValue={moodFilterPoint ? (moodFilterPoint === "entry" ? "Entry" : "Exit") : "All"}
-                  options={[
-                    { id: "all", label: "All", selected: !moodFilterPoint },
-                    { id: "entry", label: "Entry", selected: moodFilterPoint === "entry" },
-                    { id: "exit", label: "Exit", selected: moodFilterPoint === "exit" },
-                  ]}
-                  onSelect={(id) => {
-                    setMoodFilterPoint(id === "all" ? null : id);
-                    setMoodFilterMood(null);
-                    setMoodFilterRefine(null);
-                  }}
-                />
-                <DropdownFilterButton
-                  label="Mood" active={!!moodFilterMood} disabled={!moodFilterPoint}
-                  displayValue={moodFilterMood ? <span className="flex items-center gap-1"><MoodEmoji id={moodFilterMood} size={14} /> {moodMeta(moodFilterMood).label}</span> : "Any"}
-                  options={[
-                    { id: "any", label: "Any", selected: !moodFilterMood },
-                    ...MOOD_OPTIONS.map((m) => ({ id: m.id, label: m.label, emoji: m.emoji, selected: moodFilterMood === m.id })),
-                  ]}
-                  onSelect={(id) => { setMoodFilterMood(id === "any" ? null : id); setMoodFilterRefine(null); }}
-                />
-                <DropdownFilterButton
-                  label="Compare" active={!!moodFilterRefine} disabled={!moodFilterPoint || !moodFilterMood}
-                  displayValue={moodFilterRefine === "same" ? "Same Mood" : moodFilterRefine === "changed" ? "Mood Changed" : "Any"}
-                  options={[
-                    { id: "any", label: "Any", selected: !moodFilterRefine },
-                    { id: "same", label: "Same Mood (Entry = Exit)", selected: moodFilterRefine === "same" },
-                    { id: "changed", label: "Mood Changed (Entry ≠ Exit)", selected: moodFilterRefine === "changed" },
-                  ]}
-                  onSelect={(id) => setMoodFilterRefine(id === "any" ? null : id)}
-                />
-                {(moodFilterPoint || moodFilterMood || moodFilterRefine) && (
-                  <button
-                    type="button"
-                    onClick={() => { setMoodFilterPoint(null); setMoodFilterMood(null); setMoodFilterRefine(null); }}
-                    className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 px-2 transition-colors"
-                  >
-                    <IconX size={12} /> Clear filters
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {historyLoading ? (
-              <p className="text-xs text-zinc-500">Loading log...</p>
-            ) : history.length === 0 ? (
-              <p className="text-xs text-zinc-500">No trades logged yet. Complete a check and save it to start the log.</p>
-            ) : (
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 space-y-2">
-                {pagedHistory.map((h) => {
-                  const displayH = h.pnlId ? resolvePastTradeDisplay(h) : h;
-                  return (
-                  <div key={h.ts} className={`flex items-center justify-between gap-3 py-2.5 border-b border-zinc-800/70 last:border-0 ${deletingHistoryTs === h.ts ? "tj-row-exit" : "tj-row-enter"}`}>
-                    <div className="min-w-0">
-                      <p className="text-xs text-zinc-300 truncate">
-                        {h.mode === "no_trade" ? "No-Trade Day" : h.mode === "past_trade" ? pastTradeTitle(displayH) : h.mode === "funds_added" ? `Funds Added${h.amount ? " — " + fmtINR(h.amount) : ""}` : h.mode === "funds_withdrawn" ? `Withdrawal${h.amount ? " — " + fmtINR(h.amount) : ""}` : `${h.underlying ? h.underlying + " — " : ""}${strategyLabelLookup(h.strategyType)}`}
-                      </p>
-                      <p className="text-xs text-zinc-600" style={FONT_MONO}>{h.dateLabel}{h.marketRead ? ` · ${h.marketRead}` : ""}</p>
-                    </div>
-                    <div className="flex items-center gap-2.5 flex-shrink-0">
-                      {(h.entryMood || displayH.exitMood) && (
-                        <Tooltip text={`${h.entryMood ? "Entry: " + moodMeta(h.entryMood).label : ""}${h.entryMood && displayH.exitMood ? " · " : ""}${displayH.exitMood ? "Exit: " + moodMeta(displayH.exitMood).label : ""}`}>
-                          <span className="flex items-center gap-1 bg-zinc-800 px-2 py-1 rounded-full flex-shrink-0">
-                            {h.entryMood && <MoodEmoji id={h.entryMood} size={16} />}
-                            {h.entryMood && displayH.exitMood && <span className="text-zinc-600 text-[10px]">→</span>}
-                            {displayH.exitMood && <MoodEmoji id={displayH.exitMood} size={16} />}
-                          </span>
-                        </Tooltip>
-                      )}
-                      {h.mode === "no_trade" || h.mode === "funds_added" || h.mode === "funds_withdrawn" || h.mode === "past_trade" || h.ready ? (
-                        <span className={`text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-full ${h.mode === "no_trade" ? "text-zinc-300 bg-zinc-700/30" : h.mode === "funds_added" ? "text-emerald-600 bg-emerald-400/10" : h.mode === "funds_withdrawn" ? "text-rose-600 bg-rose-400/10" : "text-emerald-600 bg-emerald-400/10"}`} style={FONT_MONO}>
-                          {h.mode === "no_trade" ? "Observation" : h.mode === "funds_added" ? "Funds Added" : h.mode === "funds_withdrawn" ? "Withdrawal" : "Trade"}
-                        </span>
-                      ) : null}
-                      <Tooltip text="Download">
-                        <button onClick={() => setEntryDownloadFor(h)} className="text-zinc-600 hover:tj-primary-text flex-shrink-0 hover:scale-110 transition-transform">
-                          <IconDownload size={14} />
-                        </button>
-                      </Tooltip>
-                      {pendingDeleteTs === h.ts ? (
-                        <span className="flex items-center gap-1 flex-shrink-0">
-                          <button onClick={() => confirmDeleteEntry(h.ts)} disabled={deletingHistoryTs === h.ts} className="text-[10px] font-semibold text-rose-950 bg-rose-400 hover:bg-rose-300 disabled:opacity-50 px-2 py-1 rounded">Confirm</button>
-                          <button onClick={() => setPendingDeleteTs(null)} className="text-[10px] text-zinc-500 hover:text-zinc-300 px-1.5 py-1">Cancel</button>
-                        </span>
-                      ) : (
-                        <Tooltip text="Delete entry">
-                          <button onClick={() => setPendingDeleteTs(h.ts)} className="text-zinc-600 hover:text-rose-600 flex-shrink-0">
-                            <IconTrash size={14} />
-                          </button>
-                        </Tooltip>
-                      )}
-                    </div>
-                  </div>
-                  );
-                })}
-                {totalHistoryPages > 1 && (
-                  <div className="flex items-center justify-between pt-3">
-                    <button onClick={() => setHistoryPage((p) => Math.max(1, p - 1))} disabled={clampedPage <= 1} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-100 disabled:opacity-30 disabled:hover:text-zinc-400 px-2 py-1">
-                      <IconChevronLeft size={14} /> Prev
-                    </button>
-                    <span className="text-xs text-zinc-500" style={FONT_MONO}>Page {clampedPage} of {totalHistoryPages}</span>
-                    <button onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))} disabled={clampedPage >= totalHistoryPages} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-100 disabled:opacity-30 disabled:hover:text-zinc-400 px-2 py-1">
-                      Next <IconChevronRight size={14} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-  );
-
   return (
     <div
       className={`tj-app min-h-screen tj-theme-${th.id} tj-mode-${effectiveMode}`}
@@ -902,276 +746,52 @@ function PreTradeChecklist({ session, pinRecord, onPinChanged, securityQuestions
         )}
 
         {topTab === "setup" && mode === "trade" && (
-          <div key="setup" className="tj-fade space-y-7">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2" style={FONT_MONO}>Strategy</p>
-              <div className="flex flex-wrap gap-2 mb-2.5">
-                {STRATEGY_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      setStrategyCategory(cat.id);
-                      const opts = allStrategies.filter((s) => (s.category || "other") === cat.id);
-                      if (opts.length > 0 && !opts.some((s) => s.id === strategyType)) setStrategyType(opts[0].id);
-                    }}
-                    className={`text-xs px-3.5 py-1.5 rounded-full border ${strategyCategory === cat.id ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"}`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-              <select
-                value={strategyType}
-                onChange={(e) => setStrategyType(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-3 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
-              >
-                <option value="" disabled>{strategyCategory ? "Select a strategy" : "Pick an outlook above first"}</option>
-                {strategiesInCategory.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-              </select>
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <button onClick={() => setShowAddStrategy(true)} className="flex items-center gap-1.5 text-xs tj-primary-text font-semibold hover:scale-105 active:scale-95 transition-transform">
-                  <IconPlus size={13} /> Add your own strategy
-                </button>
-                {customStrategies.length > 0 && (
-                  <button onClick={() => setShowManageStrategies((v) => !v)} className="flex items-center gap-1.5 text-xs bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 tj-primary-text font-semibold rounded-lg px-2.5 py-1 hover:scale-105 active:scale-95 transition-transform">
-                    <IconSettings2 size={13} /> Manage your strategies
-                  </button>
-                )}
-              </div>
-
-              {showAddStrategy && (
-                <CustomStrategyDialog
-                  initial={{ category: strategyCategory }}
-                  isEdit={false}
-                  onSave={addCustomStrategy}
-                  onClose={() => setShowAddStrategy(false)}
-                />
-              )}
-
-              {showManageStrategies && customStrategies.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs text-zinc-500">Your custom strategies</p>
-                  {customStrategies.map((s) => (
-                    <div key={s.id}>
-                      {editingStratId === s.id && (
-                        <CustomStrategyDialog
-                          initial={{ label: s.label, category: s.category || "other", profile: s.profile, legTemplate: s.legTemplate }}
-                          isEdit={true}
-                          onSave={(values) => { editCustomStrategy(s.id, values); setEditingStratId(null); }}
-                          onClose={() => setEditingStratId(null)}
-                        />
-                      )}
-                      <div className="flex items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
-                        <div className="min-w-0">
-                          <p className="text-xs text-zinc-200 truncate">{s.label}</p>
-                          <p className="text-[10px] text-zinc-600">{(STRATEGY_CATEGORIES.find((c) => c.id === (s.category || "other")) || {}).label || "Other"}</p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Tooltip text="Edit">
-                            <button onClick={() => setEditingStratId(s.id)} className="text-zinc-500 hover:text-zinc-200">
-                              <IconPencil size={13} />
-                            </button>
-                          </Tooltip>
-                          {pendingDeleteStratId === s.id ? (
-                            <span className="flex items-center gap-1">
-                              <button onClick={() => { deleteCustomStrategy(s.id); setPendingDeleteStratId(null); }} className="text-[10px] font-semibold text-rose-950 bg-rose-400 hover:bg-rose-300 px-2 py-1 rounded">Confirm</button>
-                              <button onClick={() => setPendingDeleteStratId(null)} className="text-[10px] text-zinc-500 hover:text-zinc-300 px-1.5 py-1">Cancel</button>
-                            </span>
-                          ) : (
-                            <Tooltip text="Delete">
-                              <button onClick={() => setPendingDeleteStratId(s.id)} className="text-zinc-500 hover:text-rose-600">
-                                <IconTrash size={13} />
-                              </button>
-                            </Tooltip>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <LegsCard underlying={underlying} onUnderlyingChange={setUnderlying} legs={legs} onAdd={addLeg} onRemove={removeLeg} onUpdate={updateLeg} netPremium={netPremium} payoffInfo={payoffInfo} holidays={holidays} />
-
-            <DaysToExpiryWidget profile={profile} strategyLabel={currentStrategy ? currentStrategy.label : "your strategy"} legs={legs} underlying={underlying} />
-
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2" style={FONT_MONO}>
-                  <IconCalculator size={13} /> Risk Calculator
-                </p>
-                {editingTargetRisk ? (
-                  <div className="flex items-center gap-1.5">
-                    <div className="relative">
-                      <input
-                        type="text" inputMode="decimal" value={targetRiskDraft} autoFocus
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/[^0-9.]/g, "");
-                          const num = parseFloat(raw);
-                          if (raw === "") { setTargetRiskDraft(""); return; }
-                          setTargetRiskDraft(!Number.isNaN(num) && num > 20 ? "20" : raw);
-                        }}
-                        placeholder="e.g. 2"
-                        className="w-16 bg-zinc-950 border border-zinc-800 rounded-lg pl-2 pr-5 py-1 text-xs text-zinc-100 placeholder-zinc-600 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
-                        style={FONT_MONO}
-                      />
-                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500" style={FONT_MONO}>%</span>
-                    </div>
-                    <button
-                      onClick={() => { const v = parseFloat(targetRiskDraft); if (v > 0) saveTargetRiskPct(v); setEditingTargetRisk(false); }}
-                      disabled={!(parseFloat(targetRiskDraft) > 0)}
-                      className="text-xs px-2.5 py-1 rounded-full tj-primary-bg disabled:opacity-40 font-semibold"
-                    >
-                      Save
-                    </button>
-                    <Tooltip text="Cancel">
-                      <button onClick={() => setEditingTargetRisk(false)} className="text-zinc-500 hover:text-zinc-300"><IconX size={14} /></button>
-                    </Tooltip>
-                  </div>
-                ) : (
-                  <Tooltip text="Set your target risk percentage">
-                    <button
-                      onClick={() => { setTargetRiskDraft(String(targetRiskPct)); setEditingTargetRisk(true); }}
-                      className="flex items-center gap-1.5 text-xs bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-600 text-zinc-300 px-2.5 py-1 rounded-full transition-colors"
-                    >
-                      <IconTarget size={11} /> Target: {targetRiskPct}%
-                    </button>
-                  </Tooltip>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-3 items-stretch">
-                <label className="flex flex-col">
-                  <span className="text-xs text-zinc-500">Total capital (₹) <span className="text-zinc-600">— defaults from P/L statement, editable here for a separate amount</span></span>
-                  <input type="text" inputMode="numeric" placeholder="e.g. 300000" value={capital} onChange={(e) => setCapital(e.target.value.replace(/[^0-9.]/g, ""))}
-                    className="mt-auto pt-1 w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-amber-400" style={FONT_MONO} />
-                </label>
-                <label className="flex flex-col">
-                  <span className="text-xs text-zinc-500">Planned max loss (₹)</span>
-                  <input type="text" inputMode="numeric" placeholder="e.g. 6800" value={plannedLoss} onChange={(e) => setPlannedLoss(e.target.value.replace(/[^0-9.]/g, ""))}
-                    className="mt-auto pt-1 w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-amber-400" style={FONT_MONO} />
-                </label>
-              </div>
-              <div className="mt-3.5 flex items-center justify-between flex-wrap gap-2">
-                <span className={`text-sm font-semibold ${pctColor}`} style={FONT_MONO}>
-                  {pct === null ? "—" : `${pct.toFixed(2)}%`} <span className="font-normal text-zinc-500">of capital</span>
-                </span>
-                <span className={`text-xs ${pctColor}`}>{pctVerdict}</span>
-              </div>
-              <div className="mt-3.5 pt-3.5 border-t border-zinc-800 space-y-2">
-                <p className="text-xs text-zinc-500">Set planned max loss as % of capital</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button onClick={() => applyRiskPct(1)} disabled={!capNum} className={`text-xs px-3 py-1.5 rounded-full border disabled:opacity-40 ${activeRiskPct === 1 ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"}`} style={FONT_MONO}>1% · {fmtINR(capNum * 0.01)}</button>
-                  <button onClick={() => applyRiskPct(2)} disabled={!capNum} className={`text-xs px-3 py-1.5 rounded-full border disabled:opacity-40 ${activeRiskPct === 2 ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"}`} style={FONT_MONO}>2% · {fmtINR(capNum * 0.02)}</button>
-                  <button onClick={() => applyRiskPct(3)} disabled={!capNum} className={`text-xs px-3 py-1.5 rounded-full border disabled:opacity-40 ${activeRiskPct === 3 ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"}`} style={FONT_MONO}>3% · {fmtINR(capNum * 0.03)}</button>
-                  <div className="flex items-center gap-1.5">
-                    <div className="relative">
-                      <input
-                        type="text" inputMode="decimal" value={customRiskPct}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/[^0-9.]/g, "");
-                          const num = parseFloat(raw);
-                          if (raw === "") { setCustomRiskPct(""); return; }
-                          setCustomRiskPct(!Number.isNaN(num) && num > 20 ? "20" : raw);
-                        }}
-                        placeholder="e.g. 1.5"
-                        className="w-20 bg-zinc-950 border border-zinc-800 rounded-lg pl-2 pr-5 py-1.5 text-xs text-zinc-100 placeholder-zinc-600 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
-                        style={FONT_MONO}
-                      />
-                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500" style={FONT_MONO}>%</span>
-                    </div>
-                    <button
-                      onClick={() => applyRiskPct(parseFloat(customRiskPct) || 0)}
-                      disabled={!capNum || !customRiskPct}
-                      className="text-xs px-3 py-1.5 rounded-full tj-primary-bg disabled:opacity-40 font-semibold"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-                <p className="text-[11px] text-zinc-600">Max 20%.</p>
-              </div>
-            </div>
-          </div>
+          <TradeSetupPage
+            key="setup"
+            strategyCategory={strategyCategory} setStrategyCategory={setStrategyCategory}
+            allStrategies={allStrategies} strategyType={strategyType} setStrategyType={setStrategyType} strategiesInCategory={strategiesInCategory}
+            showAddStrategy={showAddStrategy} setShowAddStrategy={setShowAddStrategy} customStrategies={customStrategies}
+            showManageStrategies={showManageStrategies} setShowManageStrategies={setShowManageStrategies}
+            editingStratId={editingStratId} setEditingStratId={setEditingStratId}
+            pendingDeleteStratId={pendingDeleteStratId} setPendingDeleteStratId={setPendingDeleteStratId}
+            addCustomStrategy={addCustomStrategy} editCustomStrategy={editCustomStrategy} deleteCustomStrategy={deleteCustomStrategy}
+            underlying={underlying} setUnderlying={setUnderlying} legs={legs} addLeg={addLeg} removeLeg={removeLeg} updateLeg={updateLeg}
+            netPremium={netPremium} payoffInfo={payoffInfo} holidays={holidays}
+            profile={profile} currentStrategy={currentStrategy}
+            editingTargetRisk={editingTargetRisk} setEditingTargetRisk={setEditingTargetRisk}
+            targetRiskDraft={targetRiskDraft} setTargetRiskDraft={setTargetRiskDraft} targetRiskPct={targetRiskPct} saveTargetRiskPct={saveTargetRiskPct}
+            capital={capital} setCapital={setCapital} plannedLoss={plannedLoss} setPlannedLoss={setPlannedLoss}
+            pct={pct} pctColor={pctColor} pctVerdict={pctVerdict} capNum={capNum} activeRiskPct={activeRiskPct} applyRiskPct={applyRiskPct}
+            customRiskPct={customRiskPct} setCustomRiskPct={setCustomRiskPct}
+            notes={notes} setNotes={setNotes} noteTemplates={noteTemplates} screenshots={screenshots} setScreenshots={setScreenshots}
+            entryMood={entryMood} setEntryMood={setEntryMood}
+            entryMoodNoteOpen={entryMoodNoteOpen} setEntryMoodNoteOpen={setEntryMoodNoteOpen}
+            entryMoodNoteDraft={entryMoodNoteDraft} setEntryMoodNoteDraft={setEntryMoodNoteDraft}
+            entryMoodNote={entryMoodNote} setEntryMoodNote={setEntryMoodNote}
+            handleSaveClick={handleSaveClick} saveStatus={saveStatus} mode={mode} legsComplete={legsComplete} startNewCheck={startNewCheck}
+          />
         )}
 
         {topTab === "checklist" && (
-          <div key="checklist" className="tj-fade space-y-7">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="text-xs uppercase tracking-widest text-zinc-500" style={FONT_MONO}>
-                {checklistManagerOpen ? "Manage Checklist" : "Pre-Trade Checklist"}
-              </p>
-              {!checklistManagerOpen && (
-                <div className="flex items-center gap-1 bg-zinc-950/60 border border-zinc-800 rounded-full p-1 text-sm">
-                  <button onClick={() => handleModeToggle("trade")} className={`px-4 py-2 rounded-full transition-colors ${mode === "trade" ? "tj-primary-bg font-semibold" : "text-zinc-400"}`}>Trade Day</button>
-                  <button onClick={() => handleModeToggle("no_trade")} className={`px-4 py-2 rounded-full transition-colors ${mode === "no_trade" ? "bg-zinc-200 text-zinc-950 font-semibold" : "text-zinc-400"}`}>No-Trade Day</button>
-                </div>
-              )}
-            </div>
-
-            {!checklistManagerOpen && (
-              <CollapsibleRegion open={mode === "trade"} animated={region2Animated} duration={750}>
-                <div className="space-y-4 p-1.5">
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className={`inline-flex items-center gap-2.5 pl-3 pr-3.5 py-1.5 rounded-full border border-zinc-800 bg-zinc-900/80 ring-1 ${sc.ring}`}>
-                      <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
-                        {!readyToTrade && <span className={`animate-ping motion-reduce:animate-none absolute inline-flex h-full w-full rounded-full ${sc.glow} opacity-60`}></span>}
-                        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${sc.dot}`}></span>
-                      </span>
-                      <span className={`text-xs font-bold tracking-wide ${sc.text}`} style={FONT_MONO}>
-                        {readyToTrade ? "ARMED" : `${missingCritical.length} CRITICAL CHECKS PENDING`}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setChecklistManagerOpen((v) => !v)}
-                      className="flex items-center gap-1.5 text-xs tj-primary-text font-semibold hover:scale-105 active:scale-95 transition-transform flex-shrink-0"
-                    >
-                      <IconSettings2 size={13} /> Manage Checklist
-                    </button>
-                  </div>
-                  <div>
-                    <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
-                      <div className={`h-full ${sc.bar} rounded-full transition-all duration-300`} style={{ width: `${progressPct}%` }}></div>
-                    </div>
-                    <div className="mt-4 mb-4">
-                      <TabBar tabs={tabs} activeTab={activeTab} onSelect={setActiveTab} />
-                    </div>
-                  </div>
-                </div>
-              </CollapsibleRegion>
-            )}
-
-            {checklistManagerOpen && (
-              <div className="flex items-center justify-end">
-                <button
-                  onClick={() => setChecklistManagerOpen((v) => !v)}
-                  className="flex items-center gap-1.5 text-xs tj-primary-text font-semibold hover:scale-105 active:scale-95 transition-transform"
-                >
-                  <IconSettings2 size={13} /> Back to Checklist
-                </button>
-              </div>
-            )}
-
-            {checklistManagerOpen ? (
-              <ChecklistManagerTab
-                sections={sections}
-                onAddItem={addChecklistItem}
-                onEditItem={editChecklistItem}
-                onDeleteItem={deleteChecklistItem}
-                onAddSection={addChecklistSection}
-                onDeleteSection={deleteChecklistSection}
-                onEditSection={editChecklistSectionTitle}
-              />
-            ) : (
-              <div key={activeTab} className={activeTab === "data" && contentUsesSpecialSlide ? "" : "tj-slide-in"}>
-                {activeTab === "data" ? (
-                  <DataInterpretationSection dataReads={dataReads} onSetRow={setDataRow} avg={marketAvg} verdict={marketVerdict} staggerIn={contentUsesSpecialSlide} />
-                ) : activeSection ? (
-                  <ChecklistTabPanel section={activeSection} profile={profile} strategyId={strategyType} checked={checked} onToggle={toggleItem} onToggleAll={toggleAllInSection} />
-                ) : null}
-              </div>
-            )}
-          </div>
+          <ChecklistPage
+            key="checklist"
+            checklistManagerOpen={checklistManagerOpen} setChecklistManagerOpen={setChecklistManagerOpen}
+            mode={mode} handleModeToggle={handleModeToggle} region2Animated={region2Animated} sc={sc}
+            readyToTrade={readyToTrade} missingCritical={missingCritical} progressPct={progressPct}
+            tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}
+            sections={sections} addChecklistItem={addChecklistItem} editChecklistItem={editChecklistItem} deleteChecklistItem={deleteChecklistItem}
+            addChecklistSection={addChecklistSection} deleteChecklistSection={deleteChecklistSection} editChecklistSectionTitle={editChecklistSectionTitle}
+            dataReads={dataReads} setDataRow={setDataRow} marketAvg={marketAvg} marketVerdict={marketVerdict}
+            contentUsesSpecialSlide={contentUsesSpecialSlide} activeSection={activeSection} profile={profile} strategyType={strategyType}
+            checked={checked} toggleItem={toggleItem} toggleAllInSection={toggleAllInSection}
+            setTopTab={setTopTab} itemToSection={itemToSection}
+            notes={notes} setNotes={setNotes} noteTemplates={noteTemplates} screenshots={screenshots} setScreenshots={setScreenshots} underlying={underlying}
+            entryMood={entryMood} setEntryMood={setEntryMood}
+            entryMoodNoteOpen={entryMoodNoteOpen} setEntryMoodNoteOpen={setEntryMoodNoteOpen}
+            entryMoodNoteDraft={entryMoodNoteDraft} setEntryMoodNoteDraft={setEntryMoodNoteDraft}
+            entryMoodNote={entryMoodNote} setEntryMoodNote={setEntryMoodNote}
+            handleSaveClick={handleSaveClick} saveStatus={saveStatus} currentStrategy={currentStrategy} legsComplete={legsComplete} startNewCheck={startNewCheck}
+          />
         )}
 
         {topTab === "pnl" && (
@@ -1207,124 +827,20 @@ function PreTradeChecklist({ session, pinRecord, onPinChanged, securityQuestions
           </div>
         )}
 
-        {topTab === "log" && tradeLogSection}
-
-        {topTab !== "pnl" && topTab !== "log" && topTab !== "learn" && topTab !== "profile" && topTab !== "holidays" && topTab !== "home" && (
-          <>
-            {topTab === "checklist" && mode === "trade" && !readyToTrade && missingCritical.length > 0 && (
-              <div className="tj-fade rounded-2xl border border-rose-500/30 bg-gradient-to-br from-rose-500/10 to-rose-500/5 p-5">
-                <p className="flex items-center gap-2 text-sm font-bold text-rose-300 mb-3">
-                  <IconAlertTriangle size={16} /> Not armed yet — {missingCritical.length} critical {missingCritical.length === 1 ? "check" : "checks"} left
-                </p>
-                <div className="space-y-2">
-                  {missingCritical.map((i) => (
-                    <button
-                      key={i.id}
-                      onClick={() => { setTopTab("checklist"); setActiveTab(itemToSection[i.id]); }}
-                      className="w-full flex items-center gap-2.5 text-left text-sm text-rose-100 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-lg px-3.5 py-2.5 transition-colors"
-                    >
-                      <IconFlag size={13} className="text-rose-600 flex-shrink-0" />
-                      {i.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {topTab === "checklist" && mode === "trade" && (
-              <div className="flex flex-col items-center gap-2 pt-2 pb-1">
-                <button
-                  onClick={() => setTopTab("setup")}
-                  disabled={!readyToTrade}
-                  className="flex items-center gap-2 tj-primary-bg font-semibold text-sm px-6 py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] transition-transform"
-                >
-                  <IconAdjustmentsHorizontal size={15} /> Continue to Trade Setup
-                </button>
-                {!readyToTrade && <p className="text-xs text-zinc-600">Finish the critical checks above to continue.</p>}
-              </div>
-            )}
-
-            {(topTab === "setup" || (topTab === "checklist" && mode === "no_trade")) && (
-              <>
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2" style={FONT_MONO}>Notes — directional view & reasoning</p>
-                  <ExpandableNoteField
-                    value={notes}
-                    onChange={setNotes}
-                    placeholder="What's the read today, and why? Write it before checking the chain."
-                    label="Notes — directional view & reasoning"
-                    variant="block"
-                    templates={noteTemplates}
-                  />
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2" style={FONT_MONO}>Chart screenshots</p>
-                  <div className="flex items-center gap-2">
-                    <TradeScreenshotsButton screenshots={screenshots} onChange={setScreenshots} tradeLabel={underlying || "this trade"} />
-                    <p className="text-xs text-zinc-600">{screenshots.length ? `${screenshots.length} attached` : "Attach the setup you're looking at"}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2" style={FONT_MONO}>How are you feeling right now?</p>
-                  <div className="flex flex-wrap gap-2">
-                    {MOOD_OPTIONS.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setEntryMood((prev) => (prev === m.id ? null : m.id))}
-                        className={`flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-full border transition-colors ${
-                          entryMood === m.id ? "tj-primary-bg border-transparent font-semibold" : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-600"
-                        }`}
-                      >
-                        <MoodEmoji id={m.id} size={16} /> {m.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-4">
-                    {entryMoodNoteOpen ? (
-                      <div className="space-y-2">
-                        <input
-                          type="text" value={entryMoodNoteDraft} onChange={(e) => setEntryMoodNoteDraft(e.target.value)} autoFocus
-                          placeholder="What triggered this?"
-                          className="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-400"
-                        />
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => { setEntryMoodNote(entryMoodNoteDraft); setEntryMoodNoteOpen(false); }} className="flex items-center gap-1 text-xs tj-primary-bg font-semibold px-3 py-1.5 rounded-lg hover:scale-[1.02] active:scale-95 transition-transform">
-                            <IconDeviceFloppy size={12} /> Save
-                          </button>
-                          <button type="button" onClick={() => setEntryMoodNoteOpen(false)} className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg transition-colors">
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button type="button" onClick={() => { setEntryMoodNoteDraft(entryMoodNote); setEntryMoodNoteOpen(true); }} className="text-xs text-zinc-500 hover:text-zinc-300 underline decoration-dotted">
-                        {entryMoodNote ? "Edit note on what triggered this" : "+ Add a note on what triggered this"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <button onClick={handleSaveClick} disabled={saveStatus === "saving" || (mode === "trade" && (!currentStrategy || !underlying.trim() || !legsComplete))} className="flex items-center gap-2 tj-primary-bg font-semibold text-sm px-5 py-3 rounded-xl disabled:opacity-60 hover:scale-[1.02] active:scale-[0.98] transition-transform">
-                    <IconDeviceFloppy size={15} />
-                    {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Couldn't save — retry" : mode === "no_trade" ? "Save Market Read" : "Save This Check"}
-                  </button>
-                  <button onClick={startNewCheck} className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-sm px-5 py-3 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
-                    <IconRotate size={15} /> {mode === "no_trade" ? "Clear Notes" : "Start New Trade Check"}
-                  </button>
-                  {mode === "trade" && !currentStrategy && <span className="text-xs text-amber-400">Pick a strategy above before saving.</span>}
-                  {mode === "trade" && currentStrategy && !underlying.trim() && <span className="text-xs text-amber-400">Enter the underlying above before saving.</span>}
-                  {mode === "trade" && currentStrategy && underlying.trim() && !legsComplete && <span className="text-xs text-amber-400">Fill in every field on each leg before saving.</span>}
-                </div>
-              </>
-            )}
-
-          </>
+        {topTab === "log" && (
+          <TradeLogPage
+            key="log"
+            setTopTab={setTopTab} logRangeCustomOpen={logRangeCustomOpen} setLogRangeCustomOpen={setLogRangeCustomOpen} activeRangePreset={activeRangePreset}
+            setPresetToday={setPresetToday} setPresetWeek={setPresetWeek} setPresetMonth={setPresetMonth} setPresetAll={setPresetAll}
+            rangeFrom={rangeFrom} setRangeFrom={setRangeFrom} rangeTo={rangeTo} setRangeTo={setRangeTo} holidays={holidays}
+            openDownloadDialog={openDownloadDialog} filtered={filtered}
+            moodFilterPoint={moodFilterPoint} setMoodFilterPoint={setMoodFilterPoint} moodFilterMood={moodFilterMood} setMoodFilterMood={setMoodFilterMood}
+            moodFilterRefine={moodFilterRefine} setMoodFilterRefine={setMoodFilterRefine}
+            historyLoading={historyLoading} history={history} pagedHistory={pagedHistory} resolvePastTradeDisplay={resolvePastTradeDisplay} strategyLabelLookup={strategyLabelLookup}
+            deletingHistoryTs={deletingHistoryTs} setEntryDownloadFor={setEntryDownloadFor} pendingDeleteTs={pendingDeleteTs} setPendingDeleteTs={setPendingDeleteTs} confirmDeleteEntry={confirmDeleteEntry}
+            totalHistoryPages={totalHistoryPages} clampedPage={clampedPage} setHistoryPage={setHistoryPage}
+          />
         )}
-
 
       </div>
       )}
