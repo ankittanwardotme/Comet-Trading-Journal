@@ -23,6 +23,7 @@ import {
 import { notify, subscribeToNotifications, deleteWithUndo, clearPersistedNotifications } from "./lib/notifications.js";
 import { getPortalTarget } from "./lib/portal.js";
 import { THEMES, themeGlobalCss, THEME_PRIMARY_CSS } from "./lib/theme.js";
+import { useThemeSettings } from "./hooks/useThemeSettings.js";
 import {
   MONTH_NAMES, MONTH_ABBR, EXPIRY_DOW_CUTOVER, localISODate,
   isWeekendISO, nearestLegExpiry, contractDateCode, isLegComplete, drawPdfMasthead, formatLegLine, pad2,
@@ -11743,9 +11744,7 @@ function PreTradeChecklist({ session, pinRecord, onPinChanged, securityQuestions
   const [pnlExportYear, setPnlExportYear] = useState(() => String(new Date().getFullYear()));
   const [pnlExportRangeFrom, setPnlExportRangeFrom] = useState("");
   const [pnlExportRangeTo, setPnlExportRangeTo] = useState("");
-  const [themeId, setThemeId] = useState("swiss");
-  const [themeReady, setThemeReady] = useState(false);
-  const [colorMode, setColorMode] = useState(null);
+  const { themeId, setThemeId, colorMode, setColorMode, themeReady } = useThemeSettings();
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [avatarMenuCoords, setAvatarMenuCoords] = useState(null);
   const avatarBtnRef = useRef(null);
@@ -11802,17 +11801,6 @@ function PreTradeChecklist({ session, pinRecord, onPinChanged, securityQuestions
         }
       } catch (err) { /* default target stays */ }
       finally { if (!cancelled) setTargetRiskLoading(false); }
-    })();
-    (async () => {
-      try {
-        const res = await dbStorage.get("theme-settings");
-        if (!cancelled && res && res.value) {
-          const parsed = JSON.parse(res.value);
-          if (parsed && parsed.themeId) setThemeId(parsed.themeId);
-          if (parsed && (parsed.colorMode === "light" || parsed.colorMode === "dark")) setColorMode(parsed.colorMode);
-        }
-      } catch (err) { /* default theme stays */ }
-      finally { if (!cancelled) setThemeReady(true); }
     })();
     (async () => {
       try {
@@ -15447,25 +15435,10 @@ function OAuthConsentPage({ authorizationId }) {
   const [details, setDetails] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Mirrors PreTradeChecklist's own theme-settings load exactly, so this
-  // one-off page matches whichever theme the user actually has selected
-  // instead of a hardcoded look — same storage key, same fallback defaults.
-  const [themeId, setThemeId] = useState("swiss");
-  const [colorMode, setColorMode] = useState(null);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await dbStorage.get("theme-settings");
-        if (!cancelled && res && res.value) {
-          const parsed = JSON.parse(res.value);
-          if (parsed && parsed.themeId) setThemeId(parsed.themeId);
-          if (parsed && (parsed.colorMode === "light" || parsed.colorMode === "dark")) setColorMode(parsed.colorMode);
-        }
-      } catch (err) { /* default theme stays */ }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // Uses the same shared useThemeSettings load as PreTradeChecklist, so
+  // this one-off page matches whichever theme the user actually has
+  // selected instead of a hardcoded look.
+  const { themeId, colorMode } = useThemeSettings();
   const baseTh = THEMES.find((t) => t.id === themeId) || THEMES[0];
   const effectiveMode = colorMode || baseTh.defaultMode;
   const th = effectiveMode === baseTh.defaultMode ? baseTh : { ...baseTh, ...baseTh.alt };
