@@ -1,5 +1,7 @@
 import React from "react";
 
+export const DEFAULT_AVATAR = { id: "f5", hair: "long", colors: ["#14b8a6", "#0f766e"] };
+
 export const AvatarSVG = React.memo(function AvatarSVG({ preset, size = 64, animate = true, delay = 0 }) {
   if (!preset) return null;
   const gradId = `tj-avatar-grad-${preset.id}`;
