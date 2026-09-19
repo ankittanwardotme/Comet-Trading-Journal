@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
 import {
-  IconActivity, IconAdjustmentsHorizontal, IconAlertTriangle, IconArrowLeft, IconArrowsExchange, IconBell, IconBellRinging, IconBook, IconBooks,
-  IconBulb, IconCalculator, IconCalendar, IconCamera, IconChartBar, IconCheck, IconChecklist,
-  IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronUp, IconChevronsDown, IconChevronsUp, IconClock, IconClockHour4, IconCopy, IconCrosshair, IconCurrencyRupee,
+  IconActivity, IconAdjustmentsHorizontal, IconAlertTriangle, IconArrowLeft, IconArrowsExchange, IconBell, IconBellRinging, IconBooks,
+  IconCalculator, IconCalendar, IconCamera, IconChartBar, IconCheck, IconChecklist,
+  IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronUp, IconChevronsDown, IconChevronsUp, IconClock, IconClockHour4, IconCopy, IconCrosshair,
   IconDeviceDesktop, IconDeviceFloppy, IconDotsVertical, IconDownload, IconExternalLink, IconFilePlus, IconFileText,
-  IconFlag, IconFolder, IconFolderPlus, IconFolderSymlink, IconGitBranch, IconLayoutDashboard, IconLayoutGrid, IconLink, IconList, IconLoader2, IconLock,
-  IconMoodSmile, IconMoon, IconPalette, IconPencil, IconPercentage, IconPlus, IconPointFilled, IconRotate,
-  IconSearch, IconSettings, IconSettings2, IconShield, IconStack2, IconStar, IconStarFilled, IconSun,
+  IconFlag, IconFolder, IconFolderPlus, IconFolderSymlink, IconGitBranch, IconLayoutGrid, IconLink, IconList, IconLoader2, IconLock,
+  IconMoodSmile, IconPalette, IconPencil, IconPercentage, IconPlus, IconPointFilled, IconRotate,
+  IconSearch, IconSettings2, IconShield, IconStack2, IconStar, IconStarFilled,
   IconTag, IconTarget, IconTerminal2, IconTrash, IconTrendingDown, IconTrendingUp, IconTrophy,
   IconUserCircle, IconUserOff, IconWallet, IconX,
 } from "@tabler/icons-react";
@@ -21,7 +20,6 @@ import {
   TRADE_IMAGES_BUCKET, uploadTradeFile, deleteTradeScreenshotFiles, deleteAllTradeStorageFilesForUser, deleteAllUserData,
 } from "./lib/supabaseClient.js";
 import { notify, subscribeToNotifications, deleteWithUndo, clearPersistedNotifications } from "./lib/notifications.js";
-import { getPortalTarget } from "./lib/portal.js";
 import { THEMES, themeGlobalCss, THEME_PRIMARY_CSS } from "./lib/theme.js";
 import { useThemeSettings } from "./hooks/useThemeSettings.js";
 import { useHolidayData } from "./hooks/useHolidayData.js";
@@ -32,6 +30,7 @@ import { useChecklistState } from "./hooks/useChecklistState.js";
 import { IncompleteChecklistDialog } from "./shell/components/IncompleteChecklistDialog.jsx";
 import { AddTradeDialog } from "./shell/components/AddTradeDialog.jsx";
 import { DownloadLogDialog } from "./shell/components/DownloadLogDialog.jsx";
+import { TopNavBar } from "./shell/components/TopNavBar.jsx";
 import { FONT_DISPLAY, FONT_MONO, fmt2dp, fmtINR, fmtINRsigned, fmtHour12, formatRelativeTime } from "./lib/format.js";
 import {
   tradeRowToJs, tradeJsToRow, reminderRowToJs, reminderJsToRow, fundTxRowToJs, fundTxJsToRow,
@@ -59,7 +58,6 @@ import { Tooltip } from "./components/shared/Tooltip.jsx";
 import { InfoIcon } from "./components/shared/InfoIcon.jsx";
 import { TabBar } from "./components/shared/TabBar.jsx";
 import { CollapsibleSection, CollapsibleRegion } from "./components/shared/CollapsibleSection.jsx";
-import { AvatarSVG, DEFAULT_AVATAR } from "./components/shared/AvatarSVG.jsx";
 import { PinDigitInput } from "./components/shared/PinDigitInput.jsx";
 import { MoodEmoji } from "./components/shared/MoodEmoji.jsx";
 import { MoodPickerButton } from "./components/shared/MoodPickerButton.jsx";
@@ -72,7 +70,6 @@ import { CompactFilterButton } from "./components/shared/CompactFilterButton.jsx
 import { DropdownFilterButton } from "./components/shared/DropdownFilterButton.jsx";
 import { ThemedSelect } from "./components/shared/ThemedSelect.jsx";
 import { ToastStack } from "./components/shared/ToastStack.jsx";
-import { NotificationBell } from "./components/shared/NotificationBell.jsx";
 import { TemplatePickerModal } from "./components/shared/TemplatePickerModal.jsx";
 import { ExpandableNoteField } from "./components/shared/ExpandableNoteField.jsx";
 import { TradeScreenshotsButton } from "./components/shared/TradeScreenshotsButton.jsx";
@@ -758,130 +755,24 @@ function PreTradeChecklist({ session, pinRecord, onPinChanged, securityQuestions
       ) : (
         <>
       <ToastStack />
-      <div
-        ref={navRef}
-        className="tj-navbar sticky top-0 z-20 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 relative transition-transform duration-300 ease-out"
-        style={{ willChange: "transform", transform: navHidden ? "translateY(-100%)" : "translateY(0)" }}
-      >
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-3.5">
-          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
-            <button onClick={() => setTopTab("home")} className="tj-logo-btn flex items-center flex-shrink-0" aria-label="Comet Trading Journal — Dashboard">
-              <img src={logo} alt="Comet Trading Journal" className="h-12 w-auto transition-transform duration-150" />
-            </button>
-
-            <div className="flex items-center justify-center overflow-x-auto no-scrollbar py-3 -my-1.5 min-w-0">
-              {[
-                { id: "home", label: "Dashboard", icon: IconLayoutDashboard },
-                { id: "checklist", label: "Checklist", icon: IconChecklist },
-                { id: "setup", label: "Trade Setup", icon: IconAdjustmentsHorizontal, animated: true },
-                { id: "pnl", label: "Trade History", icon: IconCurrencyRupee },
-                { id: "learn", label: "My Learnings", icon: IconBulb, last: true },
-              ].map((t) => {
-                const visible = t.id !== "setup" || mode === "trade";
-                const tabButton = (
-                  <button
-                    key={t.id}
-                    onClick={() => setTopTab(t.id)}
-                    className={`flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-2.5 sm:px-3.5 py-2 rounded-xl transition-colors flex-shrink-0 whitespace-nowrap ${
-                      topTab === t.id ? "tj-primary-bg" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
-                    }`}
-                  >
-                    <t.icon size={15} className="flex-shrink-0" />
-                    <span className="hidden md:inline">{t.label}</span>
-                  </button>
-                );
-                if (!t.animated) return <div key={t.id} className={`flex-shrink-0 ${t.last ? "" : "mr-2"}`}>{tabButton}</div>;
-                return (
-                  <div
-                    key={t.id}
-                    className="flex-shrink-0"
-                    style={{
-                      transition: "max-width 750ms ease-out, opacity 750ms ease-out, transform 750ms ease-out, margin-right 750ms ease-out",
-                      maxWidth: visible ? "220px" : "0px",
-                      marginRight: visible ? "8px" : "0px",
-                      opacity: visible ? 1 : 0,
-                      transform: visible ? "scale(1)" : "scale(0.6)",
-                      overflow: visible ? "visible" : "hidden",
-                    }}
-                  >
-                    {tabButton}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {baseTh.alt && (
-                <Tooltip text={effectiveMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
-                  <button
-                    onClick={() => setColorMode(effectiveMode === "dark" ? "light" : "dark")}
-                    className="w-8 h-8 rounded-full border border-zinc-800 bg-zinc-900/80 flex items-center justify-center tj-primary-text hover:scale-110 hover:border-zinc-600 active:scale-95 transition-transform"
-                  >
-                    {effectiveMode === "dark" ? <IconSun size={14} /> : <IconMoon size={14} />}
-                  </button>
-                </Tooltip>
-              )}
-              <NotificationBell />
-              <Tooltip text="Profile">
-                <button
-                  ref={avatarBtnRef}
-                  onClick={() => {
-                    if (!avatarMenuOpen && avatarBtnRef.current) {
-                      const rect = avatarBtnRef.current.getBoundingClientRect();
-                      setAvatarMenuCoords({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
-                    }
-                    setAvatarMenuOpen((v) => !v);
-                  }}
-                  className="w-8 h-8 rounded-full border border-zinc-800 bg-zinc-900/80 overflow-hidden flex items-center justify-center flex-shrink-0 hover:scale-110 hover:border-zinc-600 active:scale-95 transition-transform"
-                >
-                  {userProfile.avatarType === "custom" && userProfile.avatarValue ? (
-                    <img src={userProfile.avatarValue} alt="Profile" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                  ) : (
-                    <AvatarSVG preset={DEFAULT_AVATAR} size={32} animate={false} />
-                  )}
-                </button>
-              </Tooltip>
-            </div>
-          </div>
-
-          {avatarMenuOpen && avatarMenuCoords && createPortal(
-            <>
-              <div className="fixed inset-0 z-[9998]" onClick={() => setAvatarMenuOpen(false)} />
-              <div
-                className="tj-popover fixed z-[9999] w-56 rounded-2xl border border-zinc-800 bg-zinc-900 tj-solid-bg shadow-2xl p-2 space-y-1"
-                style={{ top: avatarMenuCoords.top, right: avatarMenuCoords.right }}
-              >
-                <button
-                  onClick={() => { setPreviousTopTab(topTab === "profile" || topTab === "holidays" ? previousTopTab : topTab); setTopTab("profile"); setAvatarMenuOpen(false); }}
-                  className="w-full flex items-center gap-2.5 text-sm text-zinc-200 hover:bg-zinc-800 rounded-lg px-3 py-2.5 text-left transition-colors"
-                >
-                  <IconSettings size={15} className="text-zinc-500 flex-shrink-0" /> Settings
-                </button>
-                <button
-                  onClick={() => { setPreviousTopTab(topTab === "profile" || topTab === "holidays" ? previousTopTab : topTab); setTopTab("holidays"); setAvatarMenuOpen(false); }}
-                  className="w-full flex items-center gap-2.5 text-sm text-zinc-200 hover:bg-zinc-800 rounded-lg px-3 py-2.5 text-left transition-colors"
-                >
-                  <IconFlag size={15} className="text-zinc-500 flex-shrink-0" /> Holiday Calendar
-                </button>
-                <button
-                  onClick={() => { setPreviousTopTab(topTab === "profile" || topTab === "holidays" || topTab === "docs" ? previousTopTab : topTab); setTopTab("docs"); setAvatarMenuOpen(false); }}
-                  className="w-full flex items-center gap-2.5 text-sm text-zinc-200 hover:bg-zinc-800 rounded-lg px-3 py-2.5 text-left transition-colors"
-                >
-                  <IconBook size={15} className="text-zinc-500 flex-shrink-0" /> Docs
-                </button>
-                <div className="h-px bg-zinc-800 my-1"></div>
-                <button
-                  onClick={() => { setAvatarMenuOpen(false); sessionStorage.removeItem("tj-pin-unlocked"); supabase.auth.signOut(); }}
-                  className="w-full flex items-center gap-2.5 text-sm text-rose-400 hover:bg-zinc-800 rounded-lg px-3 py-2.5 text-left transition-colors"
-                >
-                  <IconLock size={15} className="flex-shrink-0" /> Sign Out
-                </button>
-              </div>
-            </>,
-            getPortalTarget()
-          )}
-        </div>
-      </div>
+      <TopNavBar
+        navRef={navRef}
+        navHidden={navHidden}
+        topTab={topTab}
+        setTopTab={setTopTab}
+        mode={mode}
+        baseTh={baseTh}
+        effectiveMode={effectiveMode}
+        setColorMode={setColorMode}
+        userProfile={userProfile}
+        avatarMenuOpen={avatarMenuOpen}
+        setAvatarMenuOpen={setAvatarMenuOpen}
+        avatarMenuCoords={avatarMenuCoords}
+        setAvatarMenuCoords={setAvatarMenuCoords}
+        avatarBtnRef={avatarBtnRef}
+        previousTopTab={previousTopTab}
+        setPreviousTopTab={setPreviousTopTab}
+      />
 
       {topTab !== "learn" && (
       <div className="max-w-[1400px] mx-auto px-4 sm:px-8 py-8 space-y-7">
