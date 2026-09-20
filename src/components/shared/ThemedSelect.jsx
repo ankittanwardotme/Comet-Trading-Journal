@@ -4,7 +4,7 @@ import { IconChevronDown } from "@tabler/icons-react";
 import { getPortalTarget } from "../../lib/portal.js";
 import { lockPageScroll, unlockPageScroll } from "../../lib/scrollLock.js";
 
-export function ThemedSelect({ value, options, onChange }) {
+export function ThemedSelect({ value, options, onChange, placeholder = "" }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState(null);
   const [measured, setMeasured] = useState(false);
@@ -51,9 +51,9 @@ export function ThemedSelect({ value, options, onChange }) {
     <div className="relative">
       <button
         ref={btnRef} type="button" onClick={toggle}
-        className="w-full flex items-center justify-between bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-100 text-left"
+        className={`w-full flex items-center justify-between bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-left ${current ? "text-zinc-100" : "text-zinc-500"}`}
       >
-        {current ? current.label : ""}
+        <span className="truncate">{current ? current.label : placeholder}</span>
         <IconChevronDown size={13} className="flex-shrink-0 text-zinc-500" />
       </button>
       {open && coords && createPortal(

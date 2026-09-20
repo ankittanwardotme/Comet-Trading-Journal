@@ -3,6 +3,7 @@ import { FONT_MONO, fmtINR } from "../../lib/format.js";
 import { STRATEGY_CATEGORIES } from "../../lib/checklistLogic.js";
 import { Tooltip } from "../../components/shared/Tooltip.jsx";
 import { LegsCard } from "../../components/shared/LegsCard.jsx";
+import { ThemedSelect } from "../../components/shared/ThemedSelect.jsx";
 import { CustomStrategyDialog } from "./components/CustomStrategyDialog.jsx";
 import { DaysToExpiryWidget } from "./components/DaysToExpiryWidget.jsx";
 import { TradeActionsFooter } from "../../shell/components/TradeActionsFooter.jsx";
@@ -40,14 +41,12 @@ export function TradeSetupPage({
                   </button>
                 ))}
               </div>
-              <select
+              <ThemedSelect
                 value={strategyType}
-                onChange={(e) => setStrategyType(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-3 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
-              >
-                <option value="" disabled>{strategyCategory ? "Select a strategy" : "Pick an outlook above first"}</option>
-                {strategiesInCategory.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-              </select>
+                onChange={setStrategyType}
+                options={strategiesInCategory.map((s) => ({ value: s.id, label: s.label }))}
+                placeholder={strategyCategory ? "Select a strategy" : "Pick an outlook above first"}
+              />
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <button onClick={() => setShowAddStrategy(true)} className="flex items-center gap-1.5 text-xs tj-primary-text font-semibold hover:scale-105 active:scale-95 transition-transform">
                   <IconPlus size={13} /> Add your own strategy
