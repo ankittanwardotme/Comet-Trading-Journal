@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase, dbStorage, deleteAllUserData } from "../../lib/supabaseClient.js";
 import { AppLoadingScreen } from "../../components/shared/AppLoadingScreen.jsx";
 import { AppShell } from "../../shell/AppShell.jsx";
@@ -12,6 +13,7 @@ const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default function AuthGate() {
+  const navigate = useNavigate();
   const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
   const [pinGate, setPinGate] = useState("checking"); // checking | needs-setup | needs-entry | locked-out | unlocked
   const [lockoutUntil, setLockoutUntil] = useState(null);
@@ -134,6 +136,14 @@ export default function AuthGate() {
     else setPinGate("needs-entry");
   };
 
+  // Tracks the last known session outside React state so the "SIGNED_IN"
+  // handler below can tell a genuine fresh login apart from Supabase simply
+  // re-confirming an already-restored session — which it does fire
+  // "SIGNED_IN" for on a plain page load/refresh, not just real logins.
+  // undefined = not yet determined, null = confirmed signed out, object =
+  // signed in. Only the null -> session transition is a real sign-in.
+  const sessionRef = useRef(undefined);
+
   useEffect(() => {
     let cancelled = false;
     // A fresh OAuth sign-in redirect lands back here with ?code=... in the
@@ -154,22 +164,25 @@ export default function AuthGate() {
         try {
           Object.keys(localStorage).forEach((k) => { if (k.startsWith("sb-") && k.endsWith("-auth-token")) localStorage.removeItem(k); });
         } catch (e) { /* best effort */ }
+        sessionRef.current = null;
         setSession(null);
         return;
       }
+      sessionRef.current = data.session;
       setSession(data.session);
       if (data.session) { setForceGoogleReauth(false); evaluatePinGate(data.session); }
       else setPinGate("checking");
-    }).catch(() => { if (!cancelled) setSession(null); });
+    }).catch(() => { if (!cancelled) { sessionRef.current = null; setSession(null); } });
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       dbStorage.setUserId(newSession ? newSession.user.id : null);
-      if (event === "SIGNED_IN") {
+      if (event === "SIGNED_IN" && sessionRef.current === null) {
         // A genuine, active sign-in (as opposed to the page simply
         // restoring an already-logged-in session on load) should always
         // land on the dashboard, not wherever the user happened to be
         // when they last signed out.
-        try { localStorage.setItem("tj-last-tab", "home"); } catch (e) { /* best effort */ }
+        navigate("/", { replace: true });
       }
+      sessionRef.current = newSession;
       setSession(newSession);
       if (newSession) { setForceGoogleReauth(false); evaluatePinGate(newSession); }
       else setPinGate("checking");

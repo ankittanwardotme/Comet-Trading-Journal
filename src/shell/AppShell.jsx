@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
+import { useLocation, useNavigate, Routes, Route, Navigate } from "react-router-dom";
 import {
   IconActivity, IconArrowsExchange, IconBell, IconBellRinging, IconBooks,
   IconCalendar, IconCamera, IconChartBar, IconCheck, IconChecklist,
@@ -96,18 +97,13 @@ import {
   isStrategyHedgeEligible, legsMatchForGrouping, findMatchingActiveLeg, groupLegsByPosition, closeLotsFIFO, detectStrategyShape, resolveDetectedStrategyLabel,
 } from "../lib/dateUtils.js";
 import { AppLoadingScreen } from "../components/shared/AppLoadingScreen.jsx";
+import { pathToTab, tabToPath } from "../lib/routes.js";
 
 export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, onSecurityQuestionsChanged, deletionCancelledNotice, onDismissDeletionNotice, pinUnlocked }) {
-  const VALID_TOP_TABS = ["home", "checklist", "setup", "pnl", "log", "learn", "holidays", "profile", "docs"];
-  const [topTab, setTopTab] = useState(() => {
-    try {
-      const stored = localStorage.getItem("tj-last-tab");
-      return VALID_TOP_TABS.includes(stored) ? stored : "home";
-    } catch (e) { return "home"; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem("tj-last-tab", topTab); } catch (e) { /* best effort */ }
-  }, [topTab]);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const topTab = pathToTab(location.pathname);
+  const setTopTab = useCallback((tab) => navigate(tabToPath(tab)), [navigate]);
 
   // Browsers restore the previous scroll offset on reload by default, which
   // is exactly what was carrying a scrolled-down position across a fresh
@@ -618,7 +614,8 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
           </button>
         )}
 
-        {topTab === "home" && (
+        <Routes>
+        <Route path="/" element={(
           <div key="home" className="tj-fade">
             <HomePage
               userProfile={userProfile} totalCapital={totalCapital} pnlEntries={pnlEntries} history={history}
@@ -626,9 +623,9 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
               dueReminders={dueReminders} onOpenReminders={() => { setPreviousTopTab(topTab); setTopTab("reminders"); }}
             />
           </div>
-        )}
+        )} />
 
-        {topTab === "reminders" && (
+        <Route path="/reminders" element={(
           <div key="reminders" className="tj-fade">
             <RemindersPage
               remindersWithDays={remindersWithDays}
@@ -643,9 +640,9 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
               onEdit={(reminder) => { setReschedulingReminder(reminder); setTopTab("rescheduleReminder"); }}
             />
           </div>
-        )}
+        )} />
 
-        {topTab === "addReminder" && (
+        <Route path="/reminders/add" element={(
           <div key="addReminder" className="tj-fade">
             <AddReminderPage
               onBack={() => { setReminderPrefill(null); setTopTab("reminders"); }}
@@ -655,9 +652,9 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
               prefill={reminderPrefill}
             />
           </div>
-        )}
+        )} />
 
-        {topTab === "rescheduleReminder" && reschedulingReminder && (
+        <Route path="/reminders/reschedule" element={reschedulingReminder ? (
           <div key="rescheduleReminder" className="tj-fade">
             <RescheduleReminderPage
               reminder={reschedulingReminder}
@@ -665,9 +662,9 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
               onSave={async (id, payload) => { await updateReminder(id, payload); notify(`Reminder rescheduled — ${reschedulingReminder.title}.`); setReschedulingReminder(null); setTopTab("reminders"); }}
             />
           </div>
-        )}
+        ) : null} />
 
-        {topTab === "reminderSettings" && (
+        <Route path="/reminders/settings" element={(
           <div key="reminderSettings" className="tj-fade">
             <RemindersSettingsPage
               onBack={() => setTopTab("reminders")}
@@ -675,9 +672,9 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
               onEditCategoriesClick={() => setTopTab("editCategories")}
             />
           </div>
-        )}
+        )} />
 
-        {topTab === "reminderWindowSettings" && (
+        <Route path="/reminders/settings/window" element={(
           <div key="reminderWindowSettings" className="tj-fade">
             <ReminderWindowSettingsPage
               onBack={() => setTopTab("reminderSettings")}
@@ -685,9 +682,9 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
               onChangeWindow={setReminderListWindow}
             />
           </div>
-        )}
+        )} />
 
-        {topTab === "editCategories" && (
+        <Route path="/reminders/settings/categories" element={(
           <div key="editCategories" className="tj-fade">
             <EditCategoriesPage
               onBack={() => setTopTab("reminderSettings")}
@@ -702,9 +699,9 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
               onRenameGroup={renameReminderGroup}
             />
           </div>
-        )}
+        )} />
 
-        {topTab === "profile" && (
+        <Route path="/settings" element={(
           <div key="profile" className="tj-fade">
             <SettingsPage
               profile={userProfile} onSaveProfile={saveProfile} onClearData={clearSelectedData} onDownloadBackup={downloadFullBackup} hasCustomStrategies={customStrategies.length > 0} themeId={themeId} onSaveTheme={setThemeId}
@@ -712,21 +709,21 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
               securityQuestions={securityQuestions} onSecurityQuestionsChanged={onSecurityQuestionsChanged}
             />
           </div>
-        )}
+        )} />
 
-        {topTab === "holidays" && (
+        <Route path="/holidays" element={(
           <div key="holidays" className="tj-fade">
             <HolidayCalendarPage holidays={holidays} onSave={saveHoliday} onDelete={deleteHoliday} isAdmin={isAdminSession(session)} />
           </div>
-        )}
+        )} />
 
-        {topTab === "docs" && (
+        <Route path="/docs" element={(
           <div key="docs" className="tj-fade">
             <DocsPage />
           </div>
-        )}
+        )} />
 
-        {topTab === "setup" && mode === "trade" && (
+        <Route path="/setup" element={mode !== "trade" ? null : (
           <TradeSetupPage
             key="setup"
             strategyCategory={strategyCategory} setStrategyCategory={setStrategyCategory}
@@ -751,9 +748,9 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
             entryMoodNote={entryMoodNote} setEntryMoodNote={setEntryMoodNote}
             handleSaveClick={handleSaveClick} saveStatus={saveStatus} mode={mode} legsComplete={legsComplete} startNewCheck={startNewCheck}
           />
-        )}
+        )} />
 
-        {topTab === "checklist" && (
+        <Route path="/checklist" element={(
           <ChecklistPage
             key="checklist"
             checklistManagerOpen={checklistManagerOpen} setChecklistManagerOpen={setChecklistManagerOpen}
@@ -773,9 +770,9 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
             entryMoodNote={entryMoodNote} setEntryMoodNote={setEntryMoodNote}
             handleSaveClick={handleSaveClick} saveStatus={saveStatus} currentStrategy={currentStrategy} legsComplete={legsComplete} startNewCheck={startNewCheck}
           />
-        )}
+        )} />
 
-        {topTab === "pnl" && (
+        <Route path="/pnl" element={(
           <div key="pnl" className="tj-fade">
           <PnlTab
             pnlEntries={pnlEntries} pnlLoading={pnlLoading}
@@ -806,9 +803,9 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
             noteTemplates={noteTemplates}
           />
           </div>
-        )}
+        )} />
 
-        {topTab === "log" && (
+        <Route path="/log" element={(
           <TradeLogPage
             key="log"
             setTopTab={setTopTab} logRangeCustomOpen={logRangeCustomOpen} setLogRangeCustomOpen={setLogRangeCustomOpen} activeRangePreset={activeRangePreset}
@@ -821,7 +818,10 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
             deletingHistoryTs={deletingHistoryTs} setEntryDownloadFor={setEntryDownloadFor} pendingDeleteTs={pendingDeleteTs} setPendingDeleteTs={setPendingDeleteTs} confirmDeleteEntry={confirmDeleteEntry}
             totalHistoryPages={totalHistoryPages} clampedPage={clampedPage} setHistoryPage={setHistoryPage}
           />
-        )}
+        )} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
 
       </div>
       )}
