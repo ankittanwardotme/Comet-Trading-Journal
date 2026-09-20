@@ -32,6 +32,7 @@ import { IncompleteChecklistDialog } from "./components/IncompleteChecklistDialo
 import { AddTradeDialog } from "./components/AddTradeDialog.jsx";
 import { DownloadLogDialog } from "./components/DownloadLogDialog.jsx";
 import { TopNavBar } from "./components/TopNavBar.jsx";
+import { AppFooter } from "./components/AppFooter.jsx";
 import { TradeSetupPage } from "../pages/tradeSetup/TradeSetupPage.jsx";
 import { ChecklistPage } from "../pages/checklist/ChecklistPage.jsx";
 import { TradeLogPage } from "../pages/tradeLog/TradeLogPage.jsx";
@@ -824,6 +825,7 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
         <Route path="*" element={<Navigate to={tabToPath("home")} replace />} />
         </Routes>
 
+        <AppFooter />
       </div>
       )}
 
