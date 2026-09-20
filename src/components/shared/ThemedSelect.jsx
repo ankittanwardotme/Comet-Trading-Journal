@@ -61,7 +61,7 @@ export function ThemedSelect({ value, options, onChange, placeholder = "" }) {
           <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
           <div
             ref={menuRef}
-            className="fixed z-[9999] rounded-xl border border-zinc-800 tj-solid-bg shadow-2xl p-1.5 tj-popover"
+            className="fixed z-[9999] rounded-xl border border-zinc-800 tj-solid-bg shadow-2xl p-1.5 tj-popover flex flex-col gap-1"
             style={{ top: coords.top, left: coords.left, width: coords.width, visibility: measured ? "visible" : "hidden" }}
           >
             {options.map((o) => (
