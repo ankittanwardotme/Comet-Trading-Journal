@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { IconChevronLeft } from "@tabler/icons-react";
 import logo from "../../assets/logo.png";
@@ -20,6 +21,14 @@ const STATIC_PAGES = [
 // there is a signed-in session to read one from; a signed-out visitor
 // just gets the default theme, which is a reasonable first impression.
 export function StaticPageShell({ title, children }) {
+  // A client-side route change (e.g. clicking this link in AppFooter
+  // while scrolled down the dashboard) doesn't reset scroll position the
+  // way a real page load would — without this, the page opens wherever
+  // the previous page happened to be scrolled to.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const { themeId, colorMode } = useThemeSettings();
   const baseTh = THEMES.find((t) => t.id === themeId) || THEMES[0];
   const effectiveMode = colorMode || baseTh.defaultMode;
