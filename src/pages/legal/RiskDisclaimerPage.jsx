@@ -7,8 +7,6 @@ function H2({ children }) {
 export function RiskDisclaimerPage() {
   return (
     <StaticPageShell title="Risk Disclaimer">
-      <p className="text-xs" style={{ color: "var(--tj-text4)" }}>Last updated: 20 September 2026</p>
-
       <H2>Trading involves substantial risk</H2>
       <p>
         Trading in equities, futures, and options carries a high level of risk and may not be

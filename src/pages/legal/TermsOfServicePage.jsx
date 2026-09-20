@@ -8,7 +8,6 @@ function H2({ children }) {
 export function TermsOfServicePage() {
   return (
     <StaticPageShell title="Terms of Service">
-      <p className="text-xs" style={{ color: "var(--tj-text4)" }}>Last updated: 20 September 2026</p>
       <p>
         By signing in and using Comet Trading Journal, you agree to these terms. This is a
         personal project, not a commercial product with a support contract or an uptime

@@ -8,7 +8,6 @@ function H2({ children }) {
 export function PrivacyPolicyPage() {
   return (
     <StaticPageShell title="Privacy Policy">
-      <p className="text-xs" style={{ color: "var(--tj-text4)" }}>Last updated: 20 September 2026</p>
       <p>
         Comet Trading Journal is a personal trading journal — this policy explains what data it
         collects, why, and what control you have over it. It's written in plain language on

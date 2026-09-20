@@ -21,7 +21,7 @@ export function StrategyBuilderPage({ allStrategies, customStrategies, addCustom
     <div className="tj-fade space-y-7">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1" style={FONT_MONO}>Strategy Builder</p>
+          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1" style={FONT_MONO}>Add Your Own Strategy</p>
           <p className="text-xs text-zinc-600 max-w-md">Every strategy available in Trade Setup and the checklist — built-in ones are read-only, and anything you add here shows up there too.</p>
         </div>
         <button
