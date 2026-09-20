@@ -42,19 +42,19 @@ const FOOTER_LINK_GROUPS = [
 export function AppFooter() {
   const year = new Date().getFullYear();
   return (
-    <footer className="border-t border-zinc-800 mt-12 pt-8">
-      <div className="grid grid-cols-2 sm:grid-cols-[1.2fr_1fr_1fr_1fr] gap-8">
+    <footer className="border-t border-zinc-800 mt-8 pt-5">
+      <div className="grid grid-cols-2 sm:grid-cols-[1.2fr_1fr_1fr_1fr] gap-5">
         <div className="col-span-2 sm:col-span-1">
-          <div className="flex items-center gap-2 mb-2">
-            <img src={logo} alt="" className="h-8 w-auto" />
-            <span className="text-sm font-semibold text-zinc-100">Comet Trading Journal</span>
+          <div className="flex items-center gap-1.5 mb-1">
+            <img src={logo} alt="" className="h-5 w-auto" />
+            <span className="text-xs font-semibold text-zinc-100">Comet Trading Journal</span>
           </div>
           <p className="text-xs text-zinc-500 max-w-xs">A pre-trade discipline layer for options sellers and buyers.</p>
         </div>
         {FOOTER_LINK_GROUPS.map((group) => (
           <div key={group.title}>
-            <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-3" style={FONT_MONO}>{group.title}</p>
-            <ul className="space-y-2">
+            <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-1.5" style={FONT_MONO}>{group.title}</p>
+            <ul className="space-y-1">
               {group.links.map((l) => (
                 <li key={l.label}>
                   <Link to={l.path || tabToPath(l.tab)} className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
@@ -66,7 +66,7 @@ export function AppFooter() {
           </div>
         ))}
       </div>
-      <div className="border-t border-zinc-800 mt-8 pt-4 text-center text-[11px] text-zinc-600">
+      <div className="border-t border-zinc-800 mt-5 pt-3 text-center text-[11px] text-zinc-600">
         © {year} Comet Trading Journal. All rights reserved.
       </div>
     </footer>
