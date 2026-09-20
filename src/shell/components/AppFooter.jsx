@@ -3,6 +3,9 @@ import logo from "../../assets/logo.png";
 import { FONT_MONO } from "../../lib/format.js";
 import { tabToPath } from "../../lib/routes.js";
 
+// Each link is either { tab } (an authenticated AppShell page, resolved via
+// tabToPath) or { path } (a standalone public page mounted at the top-level
+// App.jsx router, outside AppShell entirely).
 const FOOTER_LINK_GROUPS = [
   {
     title: "Trading",
@@ -12,6 +15,7 @@ const FOOTER_LINK_GROUPS = [
       { label: "Trade Setup", tab: "setup" },
       { label: "Trade History", tab: "pnl" },
       { label: "Trade Log", tab: "log" },
+      { label: "Strategy Builder", tab: "strategyBuilder" },
     ],
   },
   {
@@ -24,14 +28,23 @@ const FOOTER_LINK_GROUPS = [
       { label: "Settings", tab: "profile" },
     ],
   },
+  {
+    title: "Legal",
+    links: [
+      { label: "About", path: "/about" },
+      { label: "Privacy Policy", path: "/privacy" },
+      { label: "Terms of Service", path: "/terms" },
+      { label: "Risk Disclaimer", path: "/disclaimer" },
+    ],
+  },
 ];
 
 export function AppFooter() {
   const year = new Date().getFullYear();
   return (
     <footer className="border-t border-zinc-800 mt-12 pt-8">
-      <div className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1fr] gap-8">
-        <div>
+      <div className="grid grid-cols-2 sm:grid-cols-[1.2fr_1fr_1fr_1fr] gap-8">
+        <div className="col-span-2 sm:col-span-1">
           <div className="flex items-center gap-2 mb-2">
             <img src={logo} alt="" className="h-8 w-auto" />
             <span className="text-sm font-semibold text-zinc-100">Comet Trading Journal</span>
@@ -43,8 +56,8 @@ export function AppFooter() {
             <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-3" style={FONT_MONO}>{group.title}</p>
             <ul className="space-y-2">
               {group.links.map((l) => (
-                <li key={l.tab}>
-                  <Link to={tabToPath(l.tab)} className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
+                <li key={l.label}>
+                  <Link to={l.path || tabToPath(l.tab)} className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
                     {l.label}
                   </Link>
                 </li>

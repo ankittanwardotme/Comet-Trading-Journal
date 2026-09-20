@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient.js";
 import logo from "../../assets/logo.png";
 import { FONT_DISPLAY, FONT_MONO } from "../../lib/format.js";
@@ -47,6 +48,13 @@ export function LoginPage({ forceReauth }) {
         </div>
 
         <p className="text-center text-xs text-zinc-600 mt-6" style={FONT_MONO}>Your journal is private to your account.</p>
+
+        <p className="text-center text-[11px] text-zinc-600 mt-4">
+          By continuing you agree to the{" "}
+          <Link to="/terms" className="underline hover:text-zinc-400">Terms</Link>,{" "}
+          <Link to="/privacy" className="underline hover:text-zinc-400">Privacy Policy</Link>, and{" "}
+          <Link to="/disclaimer" className="underline hover:text-zinc-400">Risk Disclaimer</Link>.
+        </p>
       </div>
     </div>
   );

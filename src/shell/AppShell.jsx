@@ -34,6 +34,7 @@ import { DownloadLogDialog } from "./components/DownloadLogDialog.jsx";
 import { TopNavBar } from "./components/TopNavBar.jsx";
 import { AppFooter } from "./components/AppFooter.jsx";
 import { TradeSetupPage } from "../pages/tradeSetup/TradeSetupPage.jsx";
+import { StrategyBuilderPage } from "../pages/strategyBuilder/StrategyBuilderPage.jsx";
 import { ChecklistPage } from "../pages/checklist/ChecklistPage.jsx";
 import { TradeLogPage } from "../pages/tradeLog/TradeLogPage.jsx";
 import { FONT_DISPLAY, FONT_MONO, fmt2dp, fmtINRsigned, fmtHour12, formatRelativeTime } from "../lib/format.js";
@@ -606,7 +607,7 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
             </button>
           </div>
         )}
-        {(topTab === "profile" || topTab === "holidays" || topTab === "reminders" || topTab === "docs") && (
+        {(topTab === "profile" || topTab === "holidays" || topTab === "reminders" || topTab === "docs" || topTab === "strategyBuilder") && (
           <button
             onClick={() => setTopTab(previousTopTab)}
             className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
@@ -723,6 +724,13 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
           <div key="docs" className="tj-fade">
             <DocsPage />
           </div>
+        )} />
+
+        <Route path={tabToPath("strategyBuilder")} element={(
+          <StrategyBuilderPage
+            allStrategies={allStrategies} customStrategies={customStrategies}
+            addCustomStrategy={addCustomStrategy} editCustomStrategy={editCustomStrategy} deleteCustomStrategy={deleteCustomStrategy}
+          />
         )} />
 
         <Route path={tabToPath("setup")} element={mode !== "trade" ? null : (

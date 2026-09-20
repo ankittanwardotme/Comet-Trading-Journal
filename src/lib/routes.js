@@ -9,6 +9,7 @@ export const TAB_TO_PATH = {
   pnl: "/trade-history",
   log: "/log",
   learn: "/my-learnings",
+  strategyBuilder: "/strategy-builder",
   holidays: "/holidays",
   profile: "/settings",
   docs: "/docs",
