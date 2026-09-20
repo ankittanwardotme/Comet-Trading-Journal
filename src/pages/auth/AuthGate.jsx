@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase, dbStorage, deleteAllUserData } from "../../lib/supabaseClient.js";
+import { tabToPath } from "../../lib/routes.js";
 import { AppLoadingScreen } from "../../components/shared/AppLoadingScreen.jsx";
 import { AppShell } from "../../shell/AppShell.jsx";
 import { LoginPage } from "./LoginPage.jsx";
@@ -180,7 +181,7 @@ export default function AuthGate() {
         // restoring an already-logged-in session on load) should always
         // land on the dashboard, not wherever the user happened to be
         // when they last signed out.
-        navigate("/", { replace: true });
+        navigate(tabToPath("home"), { replace: true });
       }
       sessionRef.current = newSession;
       setSession(newSession);

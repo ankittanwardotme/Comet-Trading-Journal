@@ -3,12 +3,12 @@
 // it always did) to real URLs, so the browser's address bar, back/forward
 // buttons, and refresh all reflect the page actually being shown.
 export const TAB_TO_PATH = {
-  home: "/",
-  checklist: "/checklist",
-  setup: "/setup",
-  pnl: "/pnl",
+  home: "/dashboard",
+  checklist: "/pre-trade-checklist",
+  setup: "/trade-setup",
+  pnl: "/trade-history",
   log: "/log",
-  learn: "/learn",
+  learn: "/my-learnings",
   holidays: "/holidays",
   profile: "/settings",
   docs: "/docs",
@@ -23,7 +23,7 @@ export const TAB_TO_PATH = {
 const PATH_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_PATH).map(([tab, path]) => [path, tab]));
 
 export function tabToPath(tab) {
-  return TAB_TO_PATH[tab] || "/";
+  return TAB_TO_PATH[tab] || TAB_TO_PATH.home;
 }
 
 export function pathToTab(pathname) {

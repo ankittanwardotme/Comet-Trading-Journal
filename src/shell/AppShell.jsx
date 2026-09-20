@@ -615,7 +615,8 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
         )}
 
         <Routes>
-        <Route path="/" element={(
+        <Route path="/" element={<Navigate to={tabToPath("home")} replace />} />
+        <Route path={tabToPath("home")} element={(
           <div key="home" className="tj-fade">
             <HomePage
               userProfile={userProfile} totalCapital={totalCapital} pnlEntries={pnlEntries} history={history}
@@ -723,7 +724,7 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
           </div>
         )} />
 
-        <Route path="/setup" element={mode !== "trade" ? null : (
+        <Route path={tabToPath("setup")} element={mode !== "trade" ? null : (
           <TradeSetupPage
             key="setup"
             strategyCategory={strategyCategory} setStrategyCategory={setStrategyCategory}
@@ -750,7 +751,7 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
           />
         )} />
 
-        <Route path="/checklist" element={(
+        <Route path={tabToPath("checklist")} element={(
           <ChecklistPage
             key="checklist"
             checklistManagerOpen={checklistManagerOpen} setChecklistManagerOpen={setChecklistManagerOpen}
@@ -772,7 +773,7 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
           />
         )} />
 
-        <Route path="/pnl" element={(
+        <Route path={tabToPath("pnl")} element={(
           <div key="pnl" className="tj-fade">
           <PnlTab
             pnlEntries={pnlEntries} pnlLoading={pnlLoading}
@@ -820,7 +821,7 @@ export function AppShell({ session, pinRecord, onPinChanged, securityQuestions, 
           />
         )} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to={tabToPath("home")} replace />} />
         </Routes>
 
       </div>
