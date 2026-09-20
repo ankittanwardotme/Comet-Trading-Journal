@@ -66,7 +66,7 @@ export function AppFooter() {
           </div>
         ))}
       </div>
-      <div className="border-t border-zinc-800 mt-8 pt-4 pb-4 text-center text-[11px] text-zinc-600">
+      <div className="border-t border-zinc-800 mt-8 pt-4 text-center text-[11px] text-zinc-600">
         © {year} Comet Trading Journal. All rights reserved.
       </div>
     </footer>
